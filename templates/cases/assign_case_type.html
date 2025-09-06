@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if edit_mode %}Edit{% else %}Assign{% endif %} Case Type & Fee</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+    <div class="w-full max-w-md mx-auto p-6 bg-white rounded-2xl shadow-xl flex flex-col gap-6">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">
+            {% if edit_mode %}
+                Edit Case Type & Fee for {{ branch.name }}
+            {% else %}
+                Assign Case Type & Fee to {{ branch.name }}
+            {% endif %}
+        </h2>
+        <form method="post" class="flex flex-col gap-4">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="w-full py-3 mt-2 bg-purple-600 hover:bg-purple-700 text-white text-lg font-semibold rounded-lg shadow transition">
+                {% if edit_mode %}Save Changes{% else %}Assign{% endif %}
+            </button>
+        </form>
+        <a href="{% url 'view_branches_by_bank' branch.bank.pk %}" class="text-gray-600 hover:underline text-center mt-2">Back to {{ branch.bank.name }} Branches</a>
+    </div>
+</body>
+</html>

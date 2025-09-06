@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Legal App{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+    <nav class="w-full bg-white/70 backdrop-blur shadow-sm mb-4">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="{% url 'dashboard' %}" class="text-lg font-semibold text-indigo-600 hover:text-indigo-800 transition">🏠 Home</a>
+            <div class="text-sm text-gray-500">Legal App</div>
+        </div>
+    </nav>
+    <div class="max-w-7xl mx-auto">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

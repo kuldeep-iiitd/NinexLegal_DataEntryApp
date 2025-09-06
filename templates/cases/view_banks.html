@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+    <div class="w-full max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl flex flex-col gap-6">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Bank Management</h2>
+        <ul class="divide-y divide-gray-200">
+            {% for bank in banks %}
+            <li class="py-4 flex flex-col gap-2">
+                <span class="font-bold text-xl text-center text-gray-800">{{ bank.name }}</span>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                    <a href="{% url 'view_branches_by_bank' bank.pk %}" class="py-2 bg-purple-600 hover:bg-purple-700 text-white text-base font-semibold rounded-lg shadow transition text-center">View Branches</a>
+                    <a href="{% url 'create_branch' %}?bank={{ bank.pk }}" class="py-2 bg-blue-500 hover:bg-blue-600 text-white text-base font-semibold rounded-lg shadow transition text-center">Create Branch</a>
+                    <a href="{% url 'edit_bank' bank.pk %}" class="py-2 bg-blue-600 hover:bg-blue-700 text-white text-base font-semibold rounded-lg shadow transition text-center">Edit Bank Info</a>
+                    <form method="post" action="{% url 'delete_bank' bank.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white text-base font-semibold rounded-lg shadow transition">Delete Bank</button>
+                    </form>
+                </div>
+            </li>
+            {% empty %}
+            <li class="py-3 text-center text-gray-500">No banks found.</li>
+            {% endfor %}
+        </ul>
+        <a href="{% url 'create_bank' %}" class="w-full py-3 mt-2 bg-blue-700 hover:bg-blue-800 text-white text-lg font-semibold rounded-lg shadow transition text-center">Create New Bank</a>
+        <a href="{% url 'dashboard' %}" class="w-full py-3 mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-lg font-semibold rounded-lg shadow transition text-center">Back to Dashboard</a>
+    </div>
+</body>
+</html>

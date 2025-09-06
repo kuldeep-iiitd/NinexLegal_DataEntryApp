@@ -1,0 +1,58 @@
+{% extends 'cases/base.html' %}
+
+{% block title %}View Employees{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-4xl mx-auto p-6 bg-white rounded-2xl shadow-xl flex flex-col gap-6">
+    <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Employee Management</h2>
+    
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-100">
+                    <th class="px-4 py-2 border-b-2 border-gray-200">Employee ID</th>
+                    <th class="px-4 py-2 border-b-2 border-gray-200">Name</th>
+                    <th class="px-4 py-2 border-b-2 border-gray-200">Type</th>
+                    <th class="px-4 py-2 border-b-2 border-gray-200">Email</th>
+                    <th class="px-4 py-2 border-b-2 border-gray-200">Mobile</th>
+                    <th class="px-4 py-2 border-b-2 border-gray-200">Status</th>
+                    <th class="px-4 py-2 border-b-2 border-gray-200">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in employees %}
+                <tr class="{% cycle 'bg-white' 'bg-gray-50' %}">
+                    <td class="px-4 py-3 border-b border-gray-200">{{ employee.employee_id }}</td>
+                    <td class="px-4 py-3 border-b border-gray-200 font-medium">{{ employee.name }}</td>
+                    <td class="px-4 py-3 border-b border-gray-200">{{ employee.get_employee_type_display }}</td>
+                    <td class="px-4 py-3 border-b border-gray-200">{{ employee.email }}</td>
+                    <td class="px-4 py-3 border-b border-gray-200">{{ employee.mobile }}</td>
+                    <td class="px-4 py-3 border-b border-gray-200">
+                        {% if employee.is_active %}
+                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Active</span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 border-b border-gray-200 whitespace-nowrap">
+                        <a href="{% url 'edit_employee' employee.pk %}" class="text-blue-600 hover:underline mr-3">Edit</a>
+                        <a href="{% url 'delete_employee' employee.pk %}" class="text-red-600 hover:underline">Delete</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-4 py-4 text-center text-gray-500">No employees found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <a href="{% url 'create_employee' %}" class="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">Create New Employee</a>
+        </div>
+
+    <a href="{% url 'dashboard' %}" class="w-full py-3 mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-lg font-semibold rounded-lg shadow transition text-center">Back to Dashboard</a>
+
+  </div>
+</div>
+{% endblock %}

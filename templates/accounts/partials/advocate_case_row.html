@@ -1,0 +1,37 @@
+<div class="flex items-start justify-between">
+  <div class="space-y-1">
+    <div class="flex items-center space-x-2">
+      <p class="text-sm font-semibold text-gray-800">{{ case.case_number }}</p>
+      {% if case.status == 'on_hold' %}
+        {% if not case.property_address %}
+          <span class="px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 text-[10px] font-medium">Not Started</span>
+        {% else %}
+          <span class="px-1.5 py-0.5 rounded bg-blue-200 text-blue-700 text-[10px] font-medium">In Progress</span>
+        {% endif %}
+      {% elif case.status == 'on_query' %}
+        <span class="px-1.5 py-0.5 rounded bg-yellow-200 text-yellow-700 text-[10px] font-medium">Query</span>
+      {% elif case.status == 'document_pending' %}
+        <span class="px-1.5 py-0.5 rounded bg-indigo-200 text-indigo-700 text-[10px] font-medium">Doc Pending</span>
+      {% elif case.status == 'positive' %}
+        <span class="px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-700 text-[10px] font-medium">Positive</span>
+      {% elif case.status == 'negative' %}
+        <span class="px-1.5 py-0.5 rounded bg-red-200 text-red-700 text-[10px] font-medium">Negative</span>
+      {% endif %}
+    </div>
+    <p class="text-xs text-gray-500">{{ case.applicant_name }}</p>
+    <p class="text-[11px] text-gray-400">{{ case.bank.name }} • {{ case.case_type.name }}</p>
+    {% if case.status in 'positive negative' %}
+      <p class="text-[11px] text-emerald-600">Ref: {{ case.legal_reference_number|default:'--' }}</p>
+    {% endif %}
+  </div>
+  <div class="flex flex-col items-end space-y-1">
+    <a href="{% url 'case_detail' case.id %}" class="text-indigo-600 text-xs hover:underline">Detail</a>
+    {% if case.status not in 'positive negative' and case.assigned_advocate %}
+      <a href="{% url 'work_on_case' case.id %}" class="text-blue-600 text-xs hover:underline">Work</a>
+      <a href="{% url 'case_action' case.id %}" class="text-green-600 text-xs hover:underline">Action</a>
+    {% endif %}
+    {% if case.status == 'pending_assignment' %}
+      <a href="{% url 'assign_case_advocate' case.id %}" class="text-green-700 text-xs hover:underline">Assign</a>
+    {% endif %}
+  </div>
+</div>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Branch Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+    <div class="w-full max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-xl flex flex-col gap-6">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-2">
+            {% if selected_bank %}
+                Branches for {{ selected_bank.name }}
+            {% else %}
+                All Branches
+            {% endif %}
+        </h2>
+        
+        {% if selected_bank %}
+        <div class="flex justify-center mb-4">
+            <a href="{% url 'create_branch' %}?bank={{ selected_bank.pk }}" class="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-base font-semibold rounded-lg shadow transition text-center">
+                Create New Branch for {{ selected_bank.name }}
+            </a>
+        </div>
+        {% endif %}
+        
+        <ul class="divide-y divide-gray-200">
+            {% for branch in branches %}
+            <li class="py-4 flex flex-col gap-2">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-xl text-gray-800">{{ branch.name }}</span>
+                    <span class="text-sm bg-gray-100 px-2 py-1 rounded">{{ branch.branch_code }}</span>
+                </div>
+                
+                {% if branch.address %}
+                <span class="text-sm text-gray-500">{{ branch.address }}</span>
+                {% endif %}
+                
+                {% if not selected_bank %}
+                <span class="text-sm font-medium text-blue-600">Bank: {{ branch.bank.name }}</span>
+                {% endif %}
+
+                <div class="mt-3 bg-gray-50 p-3 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold text-purple-700">Assigned Case Types & Fees:</span>
+                        <a href="{% url 'assign_case_type' branch.pk %}" class="text-sm py-1 px-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded shadow-sm transition">
+                            Assign New
+                        </a>
+                    </div>
+                    <ul class="mt-2 divide-y divide-gray-100">
+                        {% for bct in branch.branch_case_types.all %}
+                        <li class="flex items-center justify-between py-2">
+                            <span class="font-medium">{{ bct.case_type.name }} - ₹{{ bct.fee }}</span>
+                            <div class="flex items-center">
+                                <a href="{% url 'edit_branch_case_type' bct.pk %}" class="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded text-sm">Edit</a>
+                                <form method="post" action="{% url 'delete_branch_case_type' bct.pk %}" class="inline ml-1">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-red-600 hover:bg-red-50 px-2 py-1 rounded text-sm">Delete</button>
+                                </form>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="text-gray-400 text-sm py-2">No case types assigned.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mt-3">
+                    <a href="{% url 'edit_branch' branch.pk %}" class="py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow transition text-center">Edit Branch</a>
+                    <form method="post" action="{% url 'delete_branch' branch.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg shadow transition">Delete Branch</button>
+                    </form>
+                </div>
+            </li>
+            {% empty %}
+            <li class="py-6 text-center text-gray-500">
+                {% if selected_bank %}
+                No branches found for {{ selected_bank.name }}.
+                {% else %}
+                No branches found.
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        
+        <div class="flex flex-col gap-2 mt-4">
+            {% if selected_bank %}
+            <a href="{% url 'view_banks' %}" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">Back to Banks</a>
+            {% else %}
+            <a href="{% url 'create_branch' %}" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">Create Branch</a>
+            {% endif %}
+            <a href="{% url 'dashboard' %}" class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 text-lg font-semibold rounded-lg shadow transition text-center">Back to Dashboard</a>
+        </div>
+    </div>
+</body>
+</html>

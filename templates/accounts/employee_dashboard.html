@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-teal-100">
+  <div class="container mx-auto px-4 py-8">
+    
+    <!-- Header Section -->
+    <div class="bg-white rounded-3xl shadow-2xl p-8 mb-8 relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full transform translate-x-32 -translate-y-32 opacity-50"></div>
+      <div class="relative z-10">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">
+              Welcome back, <span class="text-indigo-600">{{ employee_name }}</span>! 👋
+            </h1>
+            <div class="flex items-center space-x-6 text-gray-600">
+              <div class="flex items-center">
+                <span class="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                <span class="font-medium">{{ employee.get_employee_type_display }}</span>
+              </div>
+              <div class="flex items-center">
+                <span class="text-indigo-500">🆔</span>
+                <span class="ml-2 font-medium">{{ employee_id }}</span>
+              </div>
+              <div class="flex items-center">
+                <span class="text-purple-500">📧</span>
+                <span class="ml-2">{{ employee.email }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm text-gray-500 mb-1">Today's Date</div>
+            <div class="text-lg font-semibold text-gray-700" id="currentDate"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Stats (clickable) - Aligned with our 3 new sections -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <a href="{% url 'advocate_cases_filtered' 'all' %}" class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-blue-100 text-sm font-medium">Total Cases</p>
+            <p class="text-3xl font-bold">{{ total_cases|default:0 }}</p>
+          </div>
+          <div class="bg-white bg-opacity-20 rounded-full p-3">
+            <span class="text-2xl">📁</span>
+          </div>
+        </div>
+      </a>
+      
+      <a href="{% url 'advocate_cases_filtered' 'completed' %}" class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-emerald-100 text-sm font-medium">Completed</p>
+            <p class="text-3xl font-bold">{{ completed_cases|default:0 }}</p>
+          </div>
+          <div class="bg-white bg-opacity-20 rounded-full p-3">
+            <span class="text-2xl">✅</span>
+          </div>
+        </div>
+      </a>
+      
+      <a href="{% url 'advocate_cases_filtered' 'pending' %}" class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-purple-100 text-sm font-medium">Pending</p>
+            <p class="text-3xl font-bold">{{ pending_cases|default:0 }}</p>
+          </div>
+          <div class="bg-white bg-opacity-20 rounded-full p-3">
+            <span class="text-2xl">⏳</span>
+          </div>
+        </div>
+      </a>
+      
+      <a href="{% url 'advocate_cases_filtered' 'hold_query_doc' %}" class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-blue-100 text-sm font-medium">Hold/Query/Doc</p>
+            <p class="text-3xl font-bold">{{ hold_query_doc_cases_list|length|default:0 }}</p>
+          </div>
+          <div class="bg-white bg-opacity-20 rounded-full p-3">
+            <span class="text-2xl">🔄</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Segmented Case Buckets - Reorganized into 3 sections -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Section 1: Completed cases (positive and negative) -->
+      <div class="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+        <div class="bg-emerald-600 p-4 text-white font-semibold flex justify-between items-center">
+          <span>Completed Cases</span>
+          <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">{{ completed_cases_list|length }}</span>
+        </div>
+        <div class="divide-y overflow-y-auto max-h-[420px]">
+          {% for case in completed_cases_list %}
+            <div class="p-4 hover:bg-emerald-50">{% include 'accounts/partials/advocate_case_row.html' with case=case %}</div>
+          {% empty %}<div class="p-4 text-sm text-gray-500">No completed cases</div>{% endfor %}
+        </div>
+      </div>
+
+      <!-- Section 2: Pending cases that haven't been worked on -->
+      <div class="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+        <div class="bg-purple-600 p-4 text-white font-semibold flex justify-between items-center">
+          <span>Pending Cases</span>
+          <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">{{ pending_cases_list|length }}</span>
+        </div>
+        <div class="divide-y overflow-y-auto max-h-[420px]">
+          {% for case in pending_cases_list %}
+            <div class="p-4 hover:bg-purple-50">{% include 'accounts/partials/advocate_case_row.html' with case=case %}</div>
+          {% empty %}<div class="p-4 text-sm text-gray-500">No pending cases</div>{% endfor %}
+        </div>
+      </div>
+      
+      <!-- Section 3: Cases on hold, query, or with document pending -->
+      <div class="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+        <div class="bg-blue-600 p-4 text-white font-semibold flex justify-between items-center">
+          <span>On Hold/Query/Doc Pending</span>
+          <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">{{ hold_query_doc_cases_list|length }}</span>
+        </div>
+        <div class="divide-y overflow-y-auto max-h-[420px]">
+          {% for case in hold_query_doc_cases_list %}
+            <div class="p-4 hover:bg-blue-50">{% include 'accounts/partials/advocate_case_row.html' with case=case %}</div>
+          {% empty %}<div class="p-4 text-sm text-gray-500">No cases in progress</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="mt-8 bg-white rounded-3xl shadow-2xl p-6">
+      <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+        <span class="text-2xl mr-2">🚀</span>Quick Actions
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Placeholder actions (no backend routes yet) -->
+        <a href="#" class="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:-translate-y-1 shadow-lg" onclick="event.preventDefault(); alert('Contact Admin feature not implemented yet.');">
+          <div class="text-2xl mb-2">📧</div>
+          <div class="font-semibold">Contact Admin</div>
+          <div class="text-sm text-blue-100">Get help or report issues</div>
+        </a>
+        
+        <a href="#" class="p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:-translate-y-1 shadow-lg" onclick="event.preventDefault(); alert('Reports feature not implemented yet.');">
+          <div class="text-2xl mb-2">📊</div>
+          <div class="font-semibold">My Reports</div>
+          <div class="text-sm text-green-100">View your case statistics</div>
+        </a>
+        
+        <a href="#" class="p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 transform hover:-translate-y-1 shadow-lg" onclick="event.preventDefault(); alert('Settings feature not implemented yet.');">
+          <div class="text-2xl mb-2">⚙️</div>
+          <div class="font-semibold">Settings</div>
+          <div class="text-sm text-purple-100">Update your preferences</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Logout Section -->
+    <div class="mt-8 text-center">
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="px-8 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-xl hover:from-gray-500 hover:to-gray-600 transition-all duration-300 font-medium shadow-lg">
+          🚪 Logout
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Set current date
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  </script>
+</body>
+</html>

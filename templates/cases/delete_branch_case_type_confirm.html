@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Case Type Assignment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+    <div class="w-full max-w-md mx-auto p-6 bg-white rounded-2xl shadow-xl flex flex-col gap-6">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Delete Case Type Assignment</h2>
+        <p class="text-center text-gray-700 mb-4">Are you sure you want to delete the assignment of <span class="font-semibold">{{ branch_case_type.case_type.name }}</span> to <span class="font-semibold">{{ branch_case_type.branch.name }}</span>?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="w-full py-3 mt-2 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-lg shadow transition">Delete</button>
+            <a href="{% url 'view_branches_by_bank' branch_case_type.branch.bank.pk %}" class="w-full py-3 mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-lg font-semibold rounded-lg shadow transition text-center block">Cancel</a>
+        </form>
+    </div>
+</body>
+</html>

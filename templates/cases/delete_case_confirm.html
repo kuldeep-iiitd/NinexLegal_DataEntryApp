@@ -1,0 +1,74 @@
+{% extends 'cases/base.html' %}
+
+{% block title %}Delete Case{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 py-8">
+    <div class="max-w-md mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-red-500 to-orange-600 p-4">
+            <h1 class="text-xl font-bold text-white">Confirm Delete Case</h1>
+        </div>
+        
+        <div class="p-6">
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-700">
+                            <strong>Warning:</strong> This action cannot be undone. This will permanently delete the case and all associated data.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Are you sure you want to delete this case?</h2>
+            
+            <div class="bg-gray-100 rounded-lg p-4 mb-6">
+                <p class="mb-2"><span class="font-medium">Case Number:</span> {{ case.case_number }}</p>
+                <p class="mb-2"><span class="font-medium">Applicant:</span> {{ case.applicant_name }}</p>
+                <p class="mb-2"><span class="font-medium">Status:</span> {{ case.get_status_display }}</p>
+                <p class="mb-2"><span class="font-medium">Bank:</span> {{ case.bank.name }}</p>
+                {% if case.property_address %}
+                <p class="mb-2"><span class="font-medium">Property Address:</span> {{ case.property_address }}</p>
+                {% endif %}
+                {% if case.legal_reference_number %}
+                <p><span class="font-medium">Legal Reference:</span> {{ case.legal_reference_number }}</p>
+                {% endif %}
+            </div>
+            
+            {% if case.child_cases.exists %}
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-amber-700">
+                            <strong>Warning:</strong> This case has {{ case.child_cases.count }} related property case(s). Deleting this case will also delete all related cases.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="flex justify-end space-x-3 mt-6">
+                    <a href="{% url 'case_detail' case.id %}" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400 transition duration-200">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition duration-200">
+                        Delete Case
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

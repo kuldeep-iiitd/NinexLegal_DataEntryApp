@@ -1,0 +1,267 @@
+{% extends 'cases/base.html' %}
+
+{% block title %}Create New Case{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header Section -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-4">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+            </div>
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Create New Case</h1>
+            <p class="text-gray-600">Fill in the case details and assign an advocate if documents are ready</p>
+        </div>
+
+        <!-- Main Form Card -->
+        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6">
+                <h2 class="text-2xl font-bold text-white flex items-center">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Case Information
+                </h2>
+            </div>
+            
+            <div class="p-8">
+                <form method="post" id="caseForm" class="space-y-8">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information Section -->
+                    <div class="space-y-6">
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label for="{{ form.applicant_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    Applicant Name <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                        </svg>
+                                    </div>
+                                    <input type="text" name="{{ form.applicant_name.name }}" id="{{ form.applicant_name.id_for_label }}" 
+                                           class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white" 
+                                           placeholder="Enter applicant name" value="{{ form.applicant_name.value|default:'' }}">
+                                </div>
+                                {% if form.applicant_name.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.applicant_name.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <label for="{{ form.case_number.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    Case Number <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                                        </svg>
+                                    </div>
+                                    <input type="text" name="{{ form.case_number.name }}" id="{{ form.case_number.id_for_label }}" 
+                                           class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white" 
+                                           placeholder="Enter case number" value="{{ form.case_number.value|default:'' }}">
+                                </div>
+                                {% if form.case_number.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.case_number.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label for="{{ form.bank.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    Bank/NBFC Name <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                        </svg>
+                                    </div>
+                                    <select name="{{ form.bank.name }}" id="{{ form.bank.id_for_label }}" 
+                                            class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white">
+                                        <option value="">Select a Bank/NBFC</option>
+                                        {% for choice in form.bank.field.queryset %}
+                                            <option value="{{ choice.pk }}" {% if form.bank.value == choice.pk|stringformat:"s" %}selected{% endif %}>{{ choice.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                {% if form.bank.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.bank.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <label for="{{ form.case_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    Case Type <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <select name="{{ form.case_type.name }}" id="{{ form.case_type.id_for_label }}" 
+                                            class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white">
+                                        <option value="">Select a Case Type</option>
+                                        {% for choice in form.case_type.field.queryset %}
+                                            <option value="{{ choice.pk }}" {% if form.case_type.value == choice.pk|stringformat:"s" %}selected{% endif %}>{{ choice.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                {% if form.case_type.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.case_type.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Document Status Section -->
+                    <div class="space-y-6">
+                        <div class="border-l-4 border-yellow-500 pl-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Document Status</h3>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="{{ form.documents_present.name }}" id="{{ form.documents_present.id_for_label }}" 
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                                           {% if form.documents_present.value %}checked{% endif %}>
+                                    <label for="{{ form.documents_present.id_for_label }}" class="ml-3 text-lg font-medium text-gray-900">
+                                        Documents are present and ready for assignment
+                                    </label>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            {% if form.documents_present.errors %}
+                                <p class="text-red-500 text-sm mt-2">{{ form.documents_present.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Advocate Assignment Section -->
+                    <div id="advocateSection" class="space-y-6 hidden">
+                        <div class="border-l-4 border-green-500 pl-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Advocate Assignment</h3>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                            <div class="space-y-4">
+                                <label for="{{ form.assigned_advocate.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                    Select Advocate <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                        </svg>
+                                    </div>
+                                    <select name="{{ form.assigned_advocate.name }}" id="{{ form.assigned_advocate.id_for_label }}" 
+                                            class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-white">
+                                        <option value="">Select an Advocate</option>
+                                        {% for advocate in form.assigned_advocate.field.queryset %}
+                                            <option value="{{ advocate.pk }}" {% if form.assigned_advocate.value == advocate.pk|stringformat:"s" %}selected{% endif %}>{{ advocate.name }} ({{ advocate.employee_id }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                {% if form.assigned_advocate.errors %}
+                                    <p class="text-red-500 text-sm mt-2">{{ form.assigned_advocate.errors.0 }}</p>
+                                {% endif %}
+                                <div class="bg-blue-100 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                                    <div class="flex">
+                                        <svg class="h-5 w-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <p class="text-blue-700 text-sm">Since documents are present, you can assign an advocate immediately.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No Documents Info -->
+                    <div id="noDocumentsInfo" class="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl p-6">
+                        <div class="flex items-start">
+                            <svg class="h-6 w-6 text-orange-600 mr-3 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
+                            <div>
+                                <h4 class="text-lg font-semibold text-orange-800 mb-2">No Documents Available</h4>
+                                <p class="text-orange-700">The case will be saved with "Pending Assignment" status. You can assign an advocate later when documents become available.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Errors -->
+                    {% if form.non_field_errors %}
+                        <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                            <div class="flex">
+                                <svg class="h-5 w-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <p class="text-red-700">{{ form.non_field_errors.0 }}</p>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 pt-6 border-t border-gray-200">
+                        <a href="{% url 'view_cases' %}" class="inline-flex items-center px-6 py-3 border border-gray-300 rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 transition-all duration-200">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            Back to Cases
+                        </a>
+                        <button type="submit" class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-xl hover:from-blue-700 hover:to-purple-700 focus:ring-4 focus:ring-blue-300 transition-all duration-200 shadow-lg hover:shadow-xl">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Create Case
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const documentsCheckbox = document.getElementById('{{ form.documents_present.id_for_label }}');
+    const advocateSection = document.getElementById('advocateSection');
+    const noDocumentsInfo = document.getElementById('noDocumentsInfo');
+    const advocateSelect = document.getElementById('{{ form.assigned_advocate.id_for_label }}');
+
+    function toggleAdvocateSection() {
+        if (documentsCheckbox.checked) {
+            advocateSection.classList.remove('hidden');
+            noDocumentsInfo.classList.add('hidden');
+            advocateSelect.required = true;
+        } else {
+            advocateSection.classList.add('hidden');
+            noDocumentsInfo.classList.remove('hidden');
+            advocateSelect.required = false;
+            advocateSelect.value = '';
+        }
+    }
+
+    documentsCheckbox.addEventListener('change', toggleAdvocateSection);
+    toggleAdvocateSection(); // Initial call
+});
+</script>
+{% endblock %}

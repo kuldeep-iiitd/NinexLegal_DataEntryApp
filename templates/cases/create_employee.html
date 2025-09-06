@@ -1,0 +1,120 @@
+{% extends 'cases/base.html' %}
+
+{% block title %}Create Employee{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-md mx-auto p-6 bg-white rounded-2xl shadow-xl flex flex-col gap-6">
+    <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Create New Employee</h2>
+    
+    <!-- Information Alert -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <h4 class="text-blue-800 font-semibold mb-2">📋 Important Information</h4>
+        <ul class="text-blue-700 text-sm space-y-1">
+            <li>• Username must be unique and cannot be changed later</li>
+            <li>• Employee ID must be unique across the system</li>
+            <li>• Email address must not be already registered</li>
+            <li>• All fields are required</li>
+        </ul>
+    </div>
+    
+    <!-- Form Validation Errors -->
+    {% if form.non_field_errors %}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+        <h4 class="text-red-800 font-semibold mb-2">❌ Please fix the following errors:</h4>
+        {% for error in form.non_field_errors %}
+        <p class="text-red-700 text-sm">{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <form method="post" class="flex flex-col gap-4">
+        {% csrf_token %}
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Username *</label>
+            {{ form.username }}
+            {% if form.username.help_text %}
+            <p class="text-gray-500 text-xs mt-1">{{ form.username.help_text }}</p>
+            {% endif %}
+            {% if form.username.errors %}
+            <span class="text-red-600 text-sm">{{ form.username.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Password *</label>
+            {{ form.password }}
+            {% if form.password.errors %}
+            <span class="text-red-600 text-sm">{{ form.password.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Confirm Password *</label>
+            {{ form.confirm_password }}
+            {% if form.confirm_password.errors %}
+            <span class="text-red-600 text-sm">{{ form.confirm_password.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Employee ID</label>
+            {{ form.employee_id }}
+            {% if form.employee_id.errors %}
+            <span class="text-red-600 text-sm">{{ form.employee_id.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Full Name</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <span class="text-red-600 text-sm">{{ form.name.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Email</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+            <span class="text-red-600 text-sm">{{ form.email.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Mobile</label>
+            {{ form.mobile }}
+            {% if form.mobile.errors %}
+            <span class="text-red-600 text-sm">{{ form.mobile.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Aadhar</label>
+            {{ form.aadhar }}
+            {% if form.aadhar.errors %}
+            <span class="text-red-600 text-sm">{{ form.aadhar.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Employee Type</label>
+            {{ form.employee_type }}
+            {% if form.employee_type.errors %}
+            <span class="text-red-600 text-sm">{{ form.employee_type.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        {% if form.non_field_errors %}
+        <div class="mb-4">
+            <span class="text-red-600">{{ form.non_field_errors.0 }}</span>
+        </div>
+        {% endif %}
+        
+        <button type="submit" class="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition">Create Employee</button>
+    </form>
+    
+    <a href="{% url 'view_employees' %}" class="text-blue-600 hover:underline text-center mt-2">Back to Employees</a>
+    <a href="{% url 'dashboard' %}" class="text-gray-600 hover:underline text-center mt-1">Back to Dashboard</a>
+</div>
+{% endblock %}

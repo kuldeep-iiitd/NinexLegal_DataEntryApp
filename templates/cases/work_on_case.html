@@ -1,0 +1,109 @@
+{% extends 'cases/base.html' %}
+{% block title %}Work On Case{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow">
+  <h2 class="text-2xl font-bold mb-4">Work on Case: {{ case.case_number }}</h2>
+  {% if messages %}
+    <div class="mb-4">
+      {% for message in messages %}
+        <div class="{% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} p-3 rounded">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="col-span-2">
+        {{ form.property_address.label_tag }} 
+        {{ form.property_address }}
+        {% if form.property_address.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.property_address.errors }}</div>
+        {% endif %}
+      </div>
+      
+      <div>
+        {{ form.state.label_tag }} 
+        {{ form.state }}
+        {% if form.state.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.state.errors }}</div>
+        {% endif %}
+      </div>
+      
+      <div>
+        {{ form.district.label_tag }} 
+        {{ form.district }}
+        {% if form.district.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.district.errors }}</div>
+        {% endif %}
+      </div>
+      
+      <div>
+        {{ form.tehsil.label_tag }} 
+        {{ form.tehsil }}
+        {% if form.tehsil.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.tehsil.errors }}</div>
+        {% endif %}
+      </div>
+      
+      <div>
+        {{ form.branch.label_tag }} 
+        {{ form.branch }}
+        {% if form.branch.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.branch.errors }}</div>
+        {% endif %}
+      </div>
+      
+      <div>
+        {{ form.reference_name.label_tag }} 
+        {{ form.reference_name }}
+        {% if form.reference_name.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.reference_name.errors }}</div>
+        {% endif %}
+      </div>
+      
+      <div>
+        {{ form.case_name.label_tag }} 
+        {{ form.case_name }}
+        {% if form.case_name.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.case_name.errors }}</div>
+        {% endif %}
+      </div>
+    </div>
+    <h3 class="text-xl font-semibold mt-6">Create Additional Property Cases</h3>
+    <p class="text-sm text-gray-600">Each address below will become a separate linked case on save. You can leave fields empty if not needed.</p>
+    <input type="hidden" name="extra_count" value="{{ extra_count }}" id="extra_count_field" />
+    <div id="extra-address-container" class="space-y-4">
+      {% for ef in extra_forms %}
+        <div class="border p-4 rounded bg-gray-50">
+          <label class="block text-sm font-medium mb-1">Additional Property Address (Optional)</label>
+          <textarea name="addr_{{ forloop.counter0 }}_property_address" rows="3" class="form-control w-full border rounded p-2" placeholder="Enter additional property address (leave empty if not needed)">{{ ef.data.property_address }}</textarea>
+        </div>
+      {% endfor %}
+    </div>
+    <button type="button" onclick="addAddressField()" class="w-full py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors duration-200">Add Another Address</button>
+    <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">Save Details</button>
+  </form>
+  <div class="mt-4">
+    <a href="{% url 'case_detail' case.id %}" class="text-blue-600 underline">Back to Case</a>
+  </div>
+</div>
+<script>
+function addAddressField(){
+  const container = document.getElementById('extra-address-container');
+  const countField = document.getElementById('extra_count_field');
+  let idx = parseInt(countField.value);
+  const div = document.createElement('div');
+  div.className='border p-4 rounded bg-gray-50';
+  div.innerHTML = `<label class='block text-sm font-medium mb-1'>Additional Property Address</label><textarea name="addr_${idx}_property_address" rows="3" class="form-control w-full border rounded p-2" placeholder="Enter additional property address"></textarea>`;
+  container.appendChild(div);
+  countField.value = idx + 1;
+}
+</script>
+{% endblock %}

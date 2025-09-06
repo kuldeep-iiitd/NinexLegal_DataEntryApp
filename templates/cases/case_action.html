@@ -1,0 +1,57 @@
+{% extends 'cases/base.html' %}
+{% block title %}Case Action{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow">
+  <h2 class="text-2xl font-bold mb-4">Action for Case: {{ case.case_number }}</h2>
+  
+  {% if messages %}
+    <div class="mb-4">
+      {% for message in messages %}
+        <div class="{% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} p-3 rounded mb-2">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+    
+    <div>
+      <label class="block font-semibold mb-1">Select Action</label>
+      {{ form.action }}
+      {% if form.action.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.action.errors }}</div>
+      {% endif %}
+    </div>
+    
+    <div>
+      <label class="block font-semibold mb-1">Remark</label>
+      {{ form.remark }}
+      {% if form.remark.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.remark.errors }}</div>
+      {% endif %}
+      <p class="text-xs text-gray-500 mt-1">Required for Query, Hold, or Document Hold actions</p>
+    </div>
+    
+    <div class="flex items-center">
+      {{ form.forward_to_sro }} 
+      <label for="{{ form.forward_to_sro.id_for_label }}" class="ml-2">{{ form.forward_to_sro.label }}</label>
+      {% if form.forward_to_sro.errors %}
+        <div class="text-red-600 text-sm mt-1">{{ form.forward_to_sro.errors }}</div>
+      {% endif %}
+    </div>
+    
+    <button type="submit" class="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">Submit Action</button>
+  </form>
+  
+  <div class="mt-4 flex gap-4">
+    <a href="{% url 'case_detail' case.id %}" class="text-blue-600 underline">Back to Case</a>
+  </div>
+</div>
+{% endblock %}

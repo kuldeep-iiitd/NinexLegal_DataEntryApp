@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-6">
+  <div class="w-full max-w-6xl mx-auto p-6">
+    <!-- Header -->
+    <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+      <h2 class="text-3xl font-bold text-center text-gray-800">Welcome, {{ username }}!</h2>
+      <p class="text-center text-gray-600 mt-2">Your Employee ID is: <span class="font-semibold">{{ employee_id }}</span></p>
+      {% if is_admin %}
+      <p class="text-center text-sm text-blue-600 mt-1">🔑 Administrative Access</p>
+      {% endif %}
+    </div>
+
+    {% if is_admin or is_admin == None %}
+    <!-- Admin Dashboard Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      
+      <!-- Case Management Section -->
+      <div class="bg-white rounded-2xl shadow-xl p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <span class="text-2xl mr-2">⚖️</span>Case Management
+        </h3>
+        <div class="flex flex-col gap-3">
+          {% if request.user.groups.all.0.name == 'ADMIN' or request.user.groups.all.0.name == 'CO-ADMIN' or request.user.is_superuser %}
+          <a href="{% url 'create_case' %}" class="py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
+            Create New Case
+          </a>
+          {% endif %}
+          <a href="{% url 'view_cases' %}" class="py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
+            View All Cases
+          </a>
+          <a href="{% url 'view_pending_cases' %}" class="py-3 bg-orange-600 hover:bg-orange-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
+            Pending Cases
+          </a>
+        </div>
+        <p class="text-sm text-gray-600 text-center mt-3">Manage case creation and advocate assignments</p>
+      </div>
+      
+      <!-- Bank Management Section -->
+      <div class="bg-white rounded-2xl shadow-xl p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <span class="text-2xl mr-2">🏦</span>Bank Management
+        </h3>
+        <div class="flex flex-col gap-3">
+          <a href="{% url 'create_bank' %}" class="py-3 bg-blue-700 hover:bg-blue-800 text-white text-lg font-semibold rounded-lg shadow transition text-center">
+            Create Bank
+          </a>
+          <a href="{% url 'view_banks' %}" class="py-3 bg-purple-700 hover:bg-purple-800 text-white text-lg font-semibold rounded-lg shadow transition text-center">
+            View All Banks
+          </a>
+        </div>
+        <p class="text-sm text-gray-600 text-center mt-3">Manage banks and their branches</p>
+      </div>
+      
+      <!-- Case Types Section -->
+      <div class="bg-white rounded-2xl shadow-xl p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <span class="text-2xl mr-2">📋</span>Case Types
+        </h3>
+        <div class="flex flex-col gap-3">
+          <a href="{% url 'create_case_type' %}" class="py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
+            Create Case Type
+          </a>
+          <a href="{% url 'view_case_types' %}" class="py-3 bg-purple-600 hover:bg-purple-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
+            View All Case Types
+          </a>
+        </div>
+        <p class="text-sm text-gray-600 text-center mt-3">Define and manage different case categories</p>
+      </div>
+      
+      <!-- Employee Management Section -->
+      <div class="bg-white rounded-2xl shadow-xl p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <span class="text-2xl mr-2">👥</span>Employee Management
+        </h3>
+        <div class="flex flex-col gap-3">
+          <a href="{% url 'create_employee' %}" class="py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
+            Create Employee
+          </a>
+          <a href="{% url 'view_employees' %}" class="py-3 bg-teal-600 hover:bg-teal-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
+            Manage Employees
+          </a>
+        </div>
+        <p class="text-sm text-gray-600 text-center mt-3">Manage advocates and other staff members</p>
+      </div>
+
+      <!-- Quick Stats Section -->
+      <div class="bg-white rounded-2xl shadow-xl p-6 lg:col-span-2 xl:col-span-1">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <span class="text-2xl mr-2">📊</span>Quick Stats
+        </h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-blue-50 p-4 rounded-lg text-center">
+            <div class="text-2xl font-bold text-blue-600">{{ total_cases|default:"0" }}</div>
+            <div class="text-sm text-gray-600">Total Cases</div>
+          </div>
+          <div class="bg-orange-50 p-4 rounded-lg text-center">
+            <div class="text-2xl font-bold text-orange-600">{{ pending_cases|default:"0" }}</div>
+            <div class="text-sm text-gray-600">Pending</div>
+          </div>
+          <div class="bg-green-50 p-4 rounded-lg text-center">
+            <div class="text-2xl font-bold text-green-600">{{ assigned_cases|default:"0" }}</div>
+            <div class="text-sm text-gray-600">Assigned</div>
+          </div>
+          <div class="bg-purple-50 p-4 rounded-lg text-center">
+            <div class="text-2xl font-bold text-purple-600">{{ total_advocates|default:"0" }}</div>
+            <div class="text-sm text-gray-600">Advocates</div>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 text-center mt-3">System overview and metrics</p>
+      </div>
+
+      <!-- System Navigation Section -->
+      <div class="bg-white rounded-2xl shadow-xl p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+          <span class="text-2xl mr-2">🚀</span>Quick Actions
+        </h3>
+        <div class="flex flex-col gap-3">
+          {% if request.user.groups.all.0.name == 'ADMIN' or request.user.groups.all.0.name == 'CO-ADMIN' or request.user.is_superuser %}
+          <a href="{% url 'create_case' %}" class="py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-lg shadow transition text-center">
+            🆕 New Case
+          </a>
+          {% endif %}
+          <a href="{% url 'view_pending_cases' %}" class="py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-lg shadow transition text-center">
+            ⏰ Assign Cases
+          </a>
+          {% if request.user.groups.all.0.name == 'ADMIN' or request.user.groups.all.0.name == 'CO-ADMIN' or request.user.is_superuser %}
+          <a href="{% url 'create_employee' %}" class="py-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-semibold rounded-lg shadow transition text-center">
+            👤 Add Advocate
+          </a>
+          {% endif %}
+        </div>
+        <p class="text-sm text-gray-600 text-center mt-3">Most frequently used actions</p>
+      </div>
+      
+    </div>
+    {% else %}
+    <!-- Limited Dashboard for Non-Admin Users -->
+    <div class="bg-white rounded-2xl shadow-xl p-6 text-center">
+      <h3 class="text-xl font-bold text-gray-800 mb-4">⚠️ Limited Access</h3>
+      <p class="text-gray-600 mb-4">You don't have administrative privileges. Please contact your administrator to request access to the ADMIN or CO-ADMIN group.</p>
+      <div class="text-sm text-gray-500">
+        <p>Available actions:</p>
+        <ul class="list-disc list-inside mt-2">
+          <li>View this dashboard</li>
+          <li>Change your password</li>
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Logout Section -->
+    <div class="bg-white rounded-2xl shadow-xl p-6 mt-6">
+      <form method="post" action="{% url 'logout' %}" class="text-center">
+        {% csrf_token %}
+        <button type="submit" class="py-3 px-8 bg-gray-200 hover:bg-gray-300 text-gray-800 text-lg font-semibold rounded-lg shadow transition">
+          Logout
+        </button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
