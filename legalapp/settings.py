@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import dj_database_url
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -75,11 +77,13 @@ WSGI_APPLICATION = 'legalapp.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": dj_database_url.parse(
+        "postgresql://ninexlegal_db_user:3sTObS3CvYQx3ewYZPJJtvp3rvHBAKmm@dpg-d3p2iip5pdvs73aan3gg-a.singapore-postgres.render.com/ninexlegal_db",
+        conn_max_age=600,
+        ssl_require=True
+    )
 }
+
 
 
 # Password validation
