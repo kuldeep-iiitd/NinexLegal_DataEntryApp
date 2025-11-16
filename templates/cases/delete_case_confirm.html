@@ -3,71 +3,129 @@
 {% block title %}Delete Case{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 py-8">
-    <div class="max-w-md mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
-        <div class="bg-gradient-to-r from-red-500 to-orange-600 p-4">
-            <h1 class="text-xl font-bold text-white">Confirm Delete Case</h1>
+<div class="min-h-screen py-8" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
+    <div class="max-w-2xl mx-auto px-4">
+        <!-- Warning Icon -->
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-red-500/20 backdrop-blur-md rounded-full border border-red-400/30 mb-4">
+                <svg class="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Delete Case</h1>
+            <p class="text-red-200">This action cannot be undone</p>
         </div>
-        
-        <div class="p-6">
-            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+
+        <!-- Main Card -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-white/20">
+            <!-- Header -->
+            <div class="bg-red-600 px-6 py-4 border-b border-white/20">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-white mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <h2 class="text-xl font-bold text-white">Confirm Deletion</h2>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Warning Banner -->
+                <div class="bg-red-500/20 border border-red-400/30 backdrop-blur p-5 rounded-xl">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="h-6 w-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-base font-semibold text-white mb-1">Warning!</h3>
+                            <p class="text-sm text-red-100">
+                                This action cannot be undone. This will permanently delete the case and all associated data including documents, updates, and history.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Question -->
+                <div class="text-center">
+                    <h2 class="text-2xl font-bold text-white mb-2">Are you sure you want to delete this case?</h2>
+                    <p class="text-gray-200">Please review the case details below before proceeding</p>
+                </div>
+
+                <!-- Case Details -->
+                <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-5">
+                    <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M9 8h6m2 10H7a2 2 0 01-2-2V6a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V18a2 2 0 01-2 2z" />
                         </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm text-red-700">
-                            <strong>Warning:</strong> This action cannot be undone. This will permanently delete the case and all associated data.
-                        </p>
+                        Case Details
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-300 mb-1">Case Number</p>
+                            <p class="font-bold text-white text-lg">{{ case.case_number }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-300 mb-1">Status</p>
+                            <p class="font-semibold text-white">{{ case.get_status_display }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-300 mb-1">Applicant Name</p>
+                            <p class="font-semibold text-white">{{ case.applicant_name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-300 mb-1">Bank/NBFC</p>
+                            <p class="font-semibold text-white">{{ case.bank.name }}</p>
+                        </div>
+                        {% if case.property_address %}
+                        <div class="md:col-span-2">
+                            <p class="text-sm text-gray-300 mb-1">Property Address</p>
+                            <p class="font-semibold text-white">{{ case.property_address }}</p>
+                        </div>
+                        {% endif %}
+                        {% if case.legal_reference_number %}
+                        <div class="md:col-span-2">
+                            <p class="text-sm text-gray-300 mb-1">Legal Reference Number</p>
+                            <p class="font-mono font-semibold text-white">{{ case.legal_reference_number }}</p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
-            </div>
-            
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">Are you sure you want to delete this case?</h2>
-            
-            <div class="bg-gray-100 rounded-lg p-4 mb-6">
-                <p class="mb-2"><span class="font-medium">Case Number:</span> {{ case.case_number }}</p>
-                <p class="mb-2"><span class="font-medium">Applicant:</span> {{ case.applicant_name }}</p>
-                <p class="mb-2"><span class="font-medium">Status:</span> {{ case.get_status_display }}</p>
-                <p class="mb-2"><span class="font-medium">Bank:</span> {{ case.bank.name }}</p>
-                {% if case.property_address %}
-                <p class="mb-2"><span class="font-medium">Property Address:</span> {{ case.property_address }}</p>
+
+                {% if case.child_cases.exists %}
+                <!-- Child Cases Warning -->
+                <div class="bg-amber-500/20 border border-amber-400/30 backdrop-blur p-5 rounded-xl">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="h-6 w-6 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-base font-semibold text-white mb-1">Child Cases Warning!</h3>
+                            <p class="text-sm text-amber-100">
+                                This case has <strong>{{ case.child_cases.count }}</strong> related property case(s). Deleting this parent case will also delete all {{ case.child_cases.count }} child case(s) and their associated data.
+                            </p>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
-                {% if case.legal_reference_number %}
-                <p><span class="font-medium">Legal Reference:</span> {{ case.legal_reference_number }}</p>
-                {% endif %}
-            </div>
-            
-            {% if case.child_cases.exists %}
-            <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                        </svg>
+
+                <!-- Action Buttons -->
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4 pt-4">
+                        <a href="{% url 'case_detail' case.id %}" 
+                           class="w-full sm:w-auto px-8 py-3 bg-white/20 hover:bg-white/30 text-white font-semibold rounded-xl border border-white/30 backdrop-blur transition-all duration-200 text-center">
+                            <i class="fas fa-times mr-2"></i>Cancel
+                        </a>
+                        <button type="submit" 
+                                class="w-full sm:w-auto px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
+                            <i class="fas fa-trash-alt mr-2"></i>Yes, Delete Case
+                        </button>
                     </div>
-                    <div class="ml-3">
-                        <p class="text-sm text-amber-700">
-                            <strong>Warning:</strong> This case has {{ case.child_cases.count }} related property case(s). Deleting this case will also delete all related cases.
-                        </p>
-                    </div>
-                </div>
+                </form>
             </div>
-            {% endif %}
-            
-            <form method="post">
-                {% csrf_token %}
-                <div class="flex justify-end space-x-3 mt-6">
-                    <a href="{% url 'case_detail' case.id %}" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400 transition duration-200">
-                        Cancel
-                    </a>
-                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition duration-200">
-                        Delete Case
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>

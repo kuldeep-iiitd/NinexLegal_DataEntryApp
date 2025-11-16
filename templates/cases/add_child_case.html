@@ -1,0 +1,135 @@
+{% extends 'cases/base.html' %}
+{% block title %}Add Child Case{% endblock %}
+{% block content %}
+<div class="min-h-screen py-8" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
+<div class="max-w-2xl mx-auto bg-white/10 backdrop-blur-md p-6 rounded-xl shadow-lg border border-white/20">
+  <h2 class="text-2xl font-bold mb-2 text-white">Add Child Case</h2>
+  <p class="text-sm text-white/80 mb-4">Parent: {{ parent.case_number }} {% if parent.legal_reference_number %}• LRN: {{ parent.legal_reference_number }}{% endif %}</p>
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    <div>
+      <label class="block text-sm font-medium text-white">Property Address</label>
+      {{ form.property_address }}
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-white">State</label>
+        {{ form.state }}
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-white">District</label>
+        {{ form.district }}
+        <script>
+          // add initial values as data attributes
+          document.addEventListener('DOMContentLoaded', function(){
+            const d = document.getElementById('id_district');
+            const t = document.getElementById('id_tehsil');
+            if(d){ d.setAttribute('data-initial', '{{ form.district.value|default_if_none:"" }}'); }
+            if(t){ t.setAttribute('data-initial', '{{ form.tehsil.value|default_if_none:"" }}'); }
+          });
+        </script>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-white">Tehsil</label>
+        {{ form.tehsil }}
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-white">Branch</label>
+        {{ form.branch }}
+      </div>
+    </div>
+    <div class="flex gap-3 pt-2">
+      <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition">Save & Add Another</button>
+      <a href="{% url 'case_detail' parent.id %}" class="px-4 py-2 bg-white/10 backdrop-blur border border-white/20 text-white rounded-lg hover:bg-white/20 transition">Done</a>
+    </div>
+  </form>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// Cascading dropdowns for State -> District -> Tehsil
+;(function(){
+  const stateSel = document.getElementById('id_state');
+  const districtSel = document.getElementById('id_district');
+  const tehsilSel = document.getElementById('id_tehsil');
+  if(!stateSel || !districtSel || !tehsilSel) return;
+
+  async function fetchJSON(url){ const r = await fetch(url); return r.ok ? r.json() : {results: []}; }
+  function resetSelect(sel, placeholder){
+    while(sel.options.length) sel.remove(0);
+    const ph = document.createElement('option'); ph.value=''; ph.textContent=placeholder; sel.appendChild(ph);
+  }
+
+  async function loadDistricts(){
+    resetSelect(districtSel, 'Select District');
+    resetSelect(tehsilSel, 'Select Tehsil');
+    const st = stateSel.value;
+    if(!st) return;
+    const data = await fetchJSON(`/cases/api/locations/districts/?state_name=${encodeURIComponent(st)}`);
+    (data.results||[]).forEach(item=>{
+      const name = item.label.split(' (')[0];
+      const opt = document.createElement('option'); opt.value = name; opt.textContent = name; districtSel.appendChild(opt);
+    });
+    // Try to preselect parent's district if matches current initial
+    if (districtSel.getAttribute('data-initial')){
+      const init = districtSel.getAttribute('data-initial');
+      [...districtSel.options].forEach(o=>{ if(o.value===init){ o.selected=true; } });
+      await loadTehsils();
+    }
+  }
+
+  async function loadTehsils(){
+    resetSelect(tehsilSel, 'Select Tehsil');
+    const st = stateSel.value; const dist = districtSel.value;
+    if(!st || !dist) return;
+    const params = new URLSearchParams({ state_name: st, district_name: dist });
+    const data = await fetchJSON(`/cases/api/locations/tehsils/?${params.toString()}`);
+    (data.results||[]).forEach(item=>{
+      const name = item.label.split(' (')[0];
+      const opt = document.createElement('option'); opt.value = name; opt.textContent = name; tehsilSel.appendChild(opt);
+    });
+    // Preselect parent's tehsil if provided
+    if (tehsilSel.getAttribute('data-initial')){
+      const init = tehsilSel.getAttribute('data-initial');
+      [...tehsilSel.options].forEach(o=>{ if(o.value===init){ o.selected=true; } });
+    }
+  }
+
+  stateSel.addEventListener('change', loadDistricts);
+  districtSel.addEventListener('change', loadTehsils);
+
+  // Branch filtering by selected state (client-side safety; server already narrows queryset)
+  const branchSel = document.getElementById('id_branch');
+  const originalBranchOptions = branchSel ? Array.from(branchSel.options).map(o => ({value:o.value, text:o.text})) : [];
+  function filterBranches(){
+    if(!branchSel) return;
+    const st = (stateSel.value || '').trim().toLowerCase();
+    const current = branchSel.value;
+    while(branchSel.options.length) branchSel.remove(0);
+    originalBranchOptions.forEach(({value,text})=>{
+      // Infer state from text pattern "Name (Bank, State)" or dashes
+      let inferred = null;
+      const paren = text.match(/\(([^)]+)\)\s*$/);
+      if(paren && paren[1]){
+        const parts = paren[1].split(',');
+        inferred = (parts[parts.length-1]||'').trim().toLowerCase();
+      } else {
+        const emdash = text.match(/—\s*(.*)$/);
+        const dash = text.match(/-\s*(.*)$/);
+        inferred = (emdash && emdash[1] || dash && dash[1] || '').trim().toLowerCase() || null;
+      }
+      if(!st || !inferred || inferred === st){
+        const opt = document.createElement('option');
+        opt.value = value; opt.textContent = text; branchSel.appendChild(opt);
+      }
+    });
+    if(Array.from(branchSel.options).some(o=>o.value===current)) branchSel.value = current;
+  }
+  if(branchSel){ filterBranches(); stateSel.addEventListener('change', filterBranches); }
+
+  // Initial population if state already chosen
+  if (stateSel.value){ loadDistricts(); }
+})();
+</script>
+{% endblock %}

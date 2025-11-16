@@ -1,0 +1,34 @@
+{% extends 'cases/base.html' %}
+{% block title %}Add Work - {{ case.case_number }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto p-6">
+  <h1 class="text-2xl font-bold mb-4">Add Work for {{ case.case_number }}</h1>
+  <form method="post" enctype="multipart/form-data" class="bg-white p-4 rounded shadow space-y-3">
+    {% csrf_token %}
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Work Case Type</label>
+      {{ form.case_type }}
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Supporting Document (required)</label>
+      {{ form.document }}
+      <p class="text-xs text-gray-500">PDF or image preferred.</p>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Notes (optional)</label>
+      {{ form.notes }}
+    </div>
+    <div class="pt-2">
+      {% if form.case_type.field.queryset.count == 0 %}
+        <div class="p-3 bg-yellow-50 text-yellow-800 rounded border border-yellow-200 text-sm mb-2">
+          No more work types available for this bank or all have already been added.
+        </div>
+        <button class="px-4 py-2 bg-gray-300 text-gray-600 rounded cursor-not-allowed" disabled>Add Work</button>
+      {% else %}
+        <button class="px-4 py-2 bg-indigo-600 text-white rounded">Add Work</button>
+      {% endif %}
+      <a href="{% url 'case_detail' case.id %}" class="ml-2 px-4 py-2 bg-gray-200 rounded">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

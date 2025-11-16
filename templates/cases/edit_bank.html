@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Bank - {{ bank.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-10 px-4">
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl">
+        <div class="px-6 py-5 border-b">
+            <h2 class="text-2xl font-bold text-gray-800">Edit Bank - {{ bank.name }} ({{ bank.state }})</h2>
+        </div>
+        <form method="post" enctype="multipart/form-data" class="px-6 py-6 space-y-8">
+            {% csrf_token %}
+
+            <!-- Bank core fields -->
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    {{ form.name }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                    {{ form.state }}
+                </div>
+            </div>
+
+            <!-- Case types formset -->
+            {% if case_type_formset %}
+            <div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-3">Manage Case Types & Fees</h3>
+                {{ case_type_formset.management_form }}
+                {% if case_type_formset.non_form_errors %}
+                    <div class="text-sm text-red-600 mb-2">{{ case_type_formset.non_form_errors }}</div>
+                {% endif %}
+                <div id="case-type-forms" class="space-y-3">
+                    {% for ft in case_type_formset %}
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                            {% for hidden in ft.hidden_fields %}{{ hidden }}{% endfor %}
+                            <div class="md:col-span-6">{{ ft.case_type }}</div>
+                            <div class="md:col-span-4">{{ ft.fee }}</div>
+                            <div class="md:col-span-2 flex items-center gap-2">
+                                {% if ft.DELETE %}
+                                    {{ ft.DELETE }} <label class="text-red-600 text-sm">Remove</label>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <button type="button" onclick="addCaseTypeForm()" class="mt-3 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">Add Case Type</button>
+            </div>
+            {% endif %}
+
+            <!-- Documents formset -->
+            {% if document_formset %}
+            <div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-3">Manage Documents</h3>
+                {{ document_formset.management_form }}
+                {% if document_formset.non_form_errors %}
+                    <div class="text-sm text-red-600 mb-2">{{ document_formset.non_form_errors }}</div>
+                {% endif %}
+                <div id="document-forms" class="space-y-3">
+                    {% for df in document_formset %}
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                            {% for hidden in df.hidden_fields %}{{ hidden }}{% endfor %}
+                            <div class="md:col-span-5">
+                                {{ df.name }}
+                                {% if df.name.errors %}<p class="text-xs text-red-600 mt-1">{{ df.name.errors|join:', ' }}</p>{% endif %}
+                            </div>
+                            <div class="md:col-span-5">
+                                {{ df.file }}
+                                {% if df.file.errors %}<p class="text-xs text-red-600 mt-1">{{ df.file.errors|join:', ' }}</p>{% endif %}
+                            </div>
+                            <div class="md:col-span-2 flex items-center gap-2">
+                                {% if df.DELETE %}
+                                    {{ df.DELETE }} <label class="text-red-600 text-sm">Remove</label>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <button type="button" onclick="addDocumentForm()" class="mt-3 inline-flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">Add Document</button>
+            </div>
+            {% endif %}
+
+
+            <div>
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow">Update Bank</button>
+            </div>
+        </form>
+        <div class="px-6 pb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a href="{% url 'view_banks' %}" class="w-full py-3 bg-gray-600 hover:bg-gray-700 text-white text-center font-semibold rounded-lg shadow">Back to Banks</a>
+                <a href="{% url 'dashboard' %}" class="w-full py-3 bg-gray-400 hover:bg-gray-500 text-white text-center font-semibold rounded-lg shadow">Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function addCaseTypeForm() {
+            const container = document.getElementById('case-type-forms');
+            const total = document.getElementById('id_casetype-TOTAL_FORMS');
+            const i = parseInt(total.value, 10);
+                        const div = document.createElement('div');
+            div.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 items-center';
+            div.innerHTML = `
+                                <input type="hidden" name="casetype-${i}-id" id="id_casetype-${i}-id" />
+                <div class="md:col-span-6">
+                  <select name="casetype-${i}-case_type" class="w-full border rounded p-2">
+                    <option value="">---------</option>
+                    {% for case_type in case_types %}
+                      <option value="{{ case_type.id }}">{{ case_type.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="md:col-span-4">
+                  <input type="number" step="0.01" name="casetype-${i}-fee" class="w-full border rounded p-2" placeholder="Fee" />
+                </div>
+                <div class="md:col-span-2 flex items-center gap-2">
+                  <input type="checkbox" name="casetype-${i}-DELETE" id="id_casetype-${i}-DELETE" />
+                  <label class="text-red-600 text-sm" for="id_casetype-${i}-DELETE">Remove</label>
+                </div>`;
+            container.appendChild(div);
+            total.value = i + 1;
+        }
+
+        function addDocumentForm() {
+            const container = document.getElementById('document-forms');
+            const total = document.getElementById('id_document-TOTAL_FORMS');
+            const i = parseInt(total.value, 10);
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 items-center';
+            div.innerHTML = `
+                <input type="hidden" name="document-${i}-id" id="id_document-${i}-id" />
+                <div class="md:col-span-5"><input type="text" name="document-${i}-name" class="w-full border rounded p-2" placeholder="Document Name" /></div>
+                <div class="md:col-span-5"><input type="file" name="document-${i}-file" class="w-full border rounded p-2" /></div>
+                <div class="md:col-span-2 flex items-center gap-2">
+                    <input type="checkbox" name="document-${i}-DELETE" id="id_document-${i}-DELETE" />
+                    <label class="text-red-600 text-sm" for="id_document-${i}-DELETE">Remove</label>
+                </div>`;
+            container.appendChild(div);
+            total.value = i + 1;
+        }
+
+        // Extra Charges removed
+    </script>
+</body>
+</html>

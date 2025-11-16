@@ -1,66 +1,313 @@
-{% extends 'cases/base.html' %}
+{% extends 'accounts/admin_base.html' %}
+{% load static %}
 
 {% block title %}Edit Employee{% endblock %}
 
 {% block content %}
-<div class="w-full max-w-md mx-auto p-6 bg-white rounded-2xl shadow-xl flex flex-col gap-6">
-    <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Edit Employee</h2>
-    <p class="text-center text-gray-600">{{ employee.name }} ({{ employee.employee_id }})</p>
-    
-    <form method="post" class="flex flex-col gap-4">
-        {% csrf_token %}
-        
-        <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-2">Full Name</label>
-            {{ form.name }}
-            {% if form.name.errors %}
-            <span class="text-red-600 text-sm">{{ form.name.errors.0 }}</span>
-            {% endif %}
+<div class="flex-1 p-8">
+    <div class="max-w-3xl mx-auto">
+        <!-- Page Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-white mb-2 flex items-center">
+                <i class="fas fa-user-edit mr-3"></i>
+                Edit Employee
+            </h1>
+            <p class="text-purple-100">{{ employee.name }} ({{ employee.employee_id }})</p>
         </div>
-        
-        <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-2">Email</label>
-            {{ form.email }}
-            {% if form.email.errors %}
-            <span class="text-red-600 text-sm">{{ form.email.errors.0 }}</span>
+
+        <!-- Form Container -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
+            <style>
+                .form-control { 
+                    width: 100%; 
+                    border: 1px solid rgba(255, 255, 255, 0.3); 
+                    border-radius: 0.5rem; 
+                    padding: 0.75rem;
+                    background: rgba(255, 255, 255, 0.25);
+                    color: #1f2937;
+                    backdrop-filter: blur(10px);
+                    font-weight: 500;
+                }
+                .form-control::placeholder {
+                    color: rgba(31, 41, 55, 0.5);
+                }
+                .form-control:focus {
+                    outline: none;
+                    border-color: rgba(255, 255, 255, 0.6);
+                    background: rgba(255, 255, 255, 0.35);
+                }
+                input[type="checkbox"] { 
+                    width: 1.25rem; 
+                    height: 1.25rem; 
+                    border: 1px solid rgba(255, 255, 255, 0.3); 
+                    border-radius: 0.25rem; 
+                }
+                .help-text { 
+                    color: rgba(255, 255, 255, 0.9); 
+                    font-size: 0.75rem; 
+                }
+                .error-text { 
+                    color: #fca5a5; 
+                    font-size: 0.875rem; 
+                }
+                select.form-control {
+                    appearance: none;
+                    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%231f2937' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+                    background-position: right 0.5rem center;
+                    background-repeat: no-repeat;
+                    background-size: 1.5em 1.5em;
+                    padding-right: 2.5rem;
+                    color: #1f2937;
+                    font-weight: 600;
+                }
+                select.form-control option {
+                    background: white;
+                    color: #1f2937;
+                    font-weight: 500;
+                    padding: 0.5rem;
+                }
+            </style>
+
+            <!-- Form Validation Errors -->
+            {% if form.non_field_errors or form.errors %}
+            <div class="bg-red-500/20 border border-red-400/50 rounded-lg p-4 mb-6">
+                <h4 class="text-red-100 font-semibold mb-2 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Please fix the following errors:
+                </h4>
+                {% for error in form.non_field_errors %}
+                <p class="text-red-100 text-sm">{{ error }}</p>
+                {% endfor %}
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <p class="text-red-100 text-sm">{{ field }}: {{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+            </div>
             {% endif %}
-        </div>
-        
-        <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-2">Mobile</label>
-            {{ form.mobile }}
-            {% if form.mobile.errors %}
-            <span class="text-red-600 text-sm">{{ form.mobile.errors.0 }}</span>
+            
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                <div class="alert bg-{% if message.tags == 'error' %}red{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-500/20 border border-{% if message.tags == 'error' %}red{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-400/50 rounded-lg p-4">
+                    <p class="text-{% if message.tags == 'error' %}red{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-100">{{ message }}</p>
+                </div>
+                {% endfor %}
+            </div>
             {% endif %}
+            
+            <form method="post" enctype="multipart/form-data" class="space-y-5">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-user mr-2 text-purple-300"></i>
+                            Username *
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.help_text %}
+                        <p class="help-text mt-1">{{ form.username.help_text }}</p>
+                        {% endif %}
+                        {% if form.username.errors %}
+                        <span class="error-text">{{ form.username.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-id-badge mr-2 text-purple-300"></i>
+                            Employee ID
+                        </label>
+                        {{ form.employee_id }}
+                        {% if form.employee_id.errors %}
+                        <span class="error-text">{{ form.employee_id.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-lock mr-2 text-purple-300"></i>
+                            New Password
+                        </label>
+                        {{ form.password }}
+                        {% if form.password.help_text %}
+                        <p class="help-text mt-1">{{ form.password.help_text }}</p>
+                        {% endif %}
+                        {% if form.password.errors %}
+                        <span class="error-text">{{ form.password.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-lock mr-2 text-purple-300"></i>
+                            Confirm New Password
+                        </label>
+                        {{ form.confirm_password }}
+                        {% if form.confirm_password.errors %}
+                        <span class="error-text">{{ form.confirm_password.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-address-card mr-2 text-purple-300"></i>
+                            Full Name
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <span class="error-text">{{ form.name.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-envelope mr-2 text-purple-300"></i>
+                            Email
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                        <span class="error-text">{{ form.email.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-phone mr-2 text-purple-300"></i>
+                            Mobile
+                        </label>
+                        {{ form.mobile }}
+                        {% if form.mobile.errors %}
+                        <span class="error-text">{{ form.mobile.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-font mr-2 text-purple-300"></i>
+                            Initials (2 letters)
+                        </label>
+                        {{ form.initials }}
+                        {% if form.initials.help_text %}
+                        <p class="help-text mt-1">{{ form.initials.help_text }}</p>
+                        {% endif %}
+                        {% if form.initials.errors %}
+                        <span class="error-text">{{ form.initials.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-briefcase mr-2 text-purple-300"></i>
+                            Employee Type
+                        </label>
+                        {{ form.employee_type }}
+                        {% if form.employee_type.errors %}
+                        <span class="error-text">{{ form.employee_type.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-id-card mr-2 text-purple-300"></i>
+                            Aadhaar Number
+                        </label>
+                        {{ form.aadhaar_number }}
+                        {% if form.aadhaar_number.errors %}
+                        <span class="error-text">{{ form.aadhaar_number.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-white font-medium mb-2 flex items-center">
+                            <i class="fas fa-id-card-alt mr-2 text-purple-300"></i>
+                            PAN Number
+                        </label>
+                        {{ form.pan_number }}
+                        {% if form.pan_number.errors %}
+                        <span class="error-text">{{ form.pan_number.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-3 p-4 bg-white/5 rounded-lg border border-white/20">
+                    {{ form.is_active }}
+                    <label for="{{ form.is_active.id_for_label }}" class="text-white font-medium flex items-center">
+                        <i class="fas fa-toggle-on mr-2 text-purple-300"></i>
+                        Is Active
+                    </label>
+                    {% if form.is_active.errors %}
+                    <span class="error-text">{{ form.is_active.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="border-t border-white/20 pt-6 mt-6">
+                    <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+                        <i class="fas fa-file-alt mr-2 text-purple-300"></i>
+                        Manage Documents
+                    </h3>
+                    {% if document_formset %}
+                        {{ document_formset.management_form }}
+                        <div id="document-forms" class="space-y-3">
+                            {% for doc_form in document_formset %}
+                                <div class="document-form grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                                    {% for hidden in doc_form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                    <div class="md:col-span-5">{{ doc_form.name }}</div>
+                                    <div class="md:col-span-5">{{ doc_form.file }}</div>
+                                    <div class="md:col-span-2 flex items-center gap-2">
+                                        {% if doc_form.DELETE %}
+                                            {{ doc_form.DELETE }}
+                                            <label class="text-red-300 text-sm">Remove</label>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <button type="button" onclick="addDocumentForm()" class="mt-4 inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:shadow-lg transition duration-300">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add Document
+                        </button>
+                    {% endif %}
+                </div>
+                
+                <div class="flex gap-4 pt-6">
+                    <button type="submit" class="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:shadow-lg transition duration-300 flex items-center justify-center">
+                        <i class="fas fa-save mr-2"></i>
+                        Save Changes
+                    </button>
+                    <a href="{% url 'view_employees' %}" class="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white text-center font-semibold rounded-lg border border-white/20 transition duration-300 flex items-center justify-center">
+                        <i class="fas fa-users mr-2"></i>
+                        Back to Employees
+                    </a>
+                </div>
+            </form>
         </div>
-        
-        <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-2">Aadhar</label>
-            {{ form.aadhar }}
-            {% if form.aadhar.errors %}
-            <span class="text-red-600 text-sm">{{ form.aadhar.errors.0 }}</span>
-            {% endif %}
-        </div>
-        
-        <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-2">Employee Type</label>
-            {{ form.employee_type }}
-            {% if form.employee_type.errors %}
-            <span class="text-red-600 text-sm">{{ form.employee_type.errors.0 }}</span>
-            {% endif %}
-        </div>
-        
-        <div class="mb-4 flex items-center">
-            {{ form.is_active }}
-            <label for="{{ form.is_active.id_for_label }}" class="ml-2 block text-gray-700">Is Active</label>
-            {% if form.is_active.errors %}
-            <span class="text-red-600 text-sm">{{ form.is_active.errors.0 }}</span>
-            {% endif %}
-        </div>
-        
-        <button type="submit" class="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition">Save Changes</button>
-    </form>
-    
-    <a href="{% url 'view_employees' %}" class="text-blue-600 hover:underline text-center mt-2">Back to Employees</a>
+    </div>
 </div>
+
+<script>
+    function addDocumentForm() {
+        const formContainer = document.getElementById('document-forms');
+        const totalForms = document.getElementById('id_document-TOTAL_FORMS');
+        const formCount = parseInt(totalForms.value);
+        
+        const newForm = document.createElement('div');
+        newForm.className = 'document-form grid grid-cols-1 md:grid-cols-12 gap-3 items-center';
+        newForm.innerHTML = `
+            <div class="md:col-span-5"><input type="text" name="document-${formCount}-name" class="form-control" placeholder="Document Name"></div>
+            <div class="md:col-span-5"><input type="file" name="document-${formCount}-file" class="form-control"></div>
+            <div class="md:col-span-2 flex items-center gap-2">
+                <input type="checkbox" name="document-${formCount}-DELETE">
+                <label class="text-red-300 text-sm">Remove</label>
+            </div>
+        `;
+        
+        formContainer.appendChild(newForm);
+        totalForms.value = formCount + 1;
+    }
+</script>
 {% endblock %}

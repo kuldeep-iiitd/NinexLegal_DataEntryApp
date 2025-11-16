@@ -17,7 +17,7 @@
             <p class="text-center text-amber-600 font-medium">Select a bank to create a branch for:</p>
             <div class="mt-2 grid grid-cols-2 gap-2">
                 {% for bank in banks %}
-                <a href="{% url 'create_branch' %}?bank={{ bank.pk }}" class="py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow transition text-center">{{ bank.name }}</a>
+                <a href="{% url 'create_branch' %}?bank={{ bank.pk }}" class="py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow transition text-center">{{ bank.name }} ({{ bank.state }})</a>
                 {% empty %}
                 <p class="col-span-2 text-center text-gray-500 py-2">No banks found. <a href="{% url 'create_bank' %}" class="text-blue-600 hover:underline">Create a bank first</a>.</p>
                 {% endfor %}
@@ -26,10 +26,27 @@
         {% endif %}
         
         {% if bank_id or form.bank.value or edit_mode %}
+        {% if selected_bank %}
+            <div class="text-center text-sm text-gray-600">Creating branch for <span class="font-semibold">{{ selected_bank.name }} ({{ selected_bank.state }})</span></div>
+        {% endif %}
         <form method="post" class="flex flex-col gap-4">
             {% csrf_token %}
             {% if bank_id %}<input type="hidden" name="bank_id" value="{{ bank_id }}">{% endif %}
-            {{ form.as_p }}
+            {# When a bank is pre-selected, the bank field is hidden in the form; render remaining fields nicely #}
+            <div class="space-y-3">
+                {% for field in form %}
+                    {% if field.name != 'bank' or not selected_bank %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>{% endif %}
+                            {% for error in field.errors %}<p class="text-xs text-red-600">{{ error }}</p>{% endfor %}
+                        </div>
+                    {% else %}
+                        {{ field }}
+                    {% endif %}
+                {% endfor %}
+            </div>
             <button type="submit" class="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition">
                 {% if edit_mode %}Save Changes{% else %}Create Branch{% endif %}
             </button>
@@ -38,11 +55,8 @@
         
         <div class="flex flex-col gap-2 mt-4">
             <a href="{% url 'view_banks' %}" class="text-blue-600 hover:underline text-center">Back to Banks</a>
-                        </form>
             
             <a href="{% url 'dashboard' %}" class="text-gray-600 hover:underline text-center mt-1">Back to Dashboard</a>
-        </div>
-    </div>
         </div>
     </div>
 </body>

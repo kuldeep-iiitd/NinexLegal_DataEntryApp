@@ -1,0 +1,16 @@
+S.No,Case No,Applicant,Bank,Case Type,LRN,Receipt,Fee,Extras (name:amount),Extras Total,Total
+1,FILE-2506-0058,Applicant 58,HDFC,Valuation,,2000.00,1500.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0 | HU: 100.0,280.00,3780.00
+2,FILE-2509-0057,Applicant 57,HDFC,Search Report,,2500.00,0.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,2680.00
+3,FILE-2507-0055,Applicant 55,HDFC,Valuation,,3000.00,1500.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,4680.00
+4,FILE-2508-0053,Applicant 53,HDFC,Legal Opinion,,1500.00,1500.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,3180.00
+5,FILE-2507-0051,Applicant 51,HDFC,Legal Opinion,,3000.00,1500.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,4680.00
+6,FILE-2509-0049,Applicant 49,HDFC,Legal Opinion,,2500.00,1500.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,4180.00
+7,FILE-2508-0043,Applicant 43,HDFC,Search Report,,1500.00,0.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,1680.00
+8,FILE-2509-0038,Applicant 38,HDFC,Legal Opinion,,1000.00,1500.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,2680.00
+9,FILE-2507-0035,Applicant 35,HDFC,Legal Opinion,,3000.00,1500.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,4680.00
+10,FILE-2507-0032,Applicant 32,HDFC,Search Report,,2500.00,1500.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,4180.00
+11,FILE-2507-0029,Applicant 29,HDFC,Valuation,,1500.00,1500.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,3180.00
+12,FILE-2506-0019,Applicant 19,HDFC,Search Report,,2000.00,0.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,2180.00
+13,FILE-2507-0018,Applicant 18,HDFC,Search Report,,3000.00,3000.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,6180.00
+14,FILE-2510-0012,Applicant 12,HDFC,Legal Opinion,,3000.00,0.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,3180.00
+15,FILE-2507-0011,Applicant 11,HDFC,Legal Opinion,,3000.00,1500.00,Courier: 50.0 | Scanning: 30.0 | Vetting: 100.0,180.00,4680.00

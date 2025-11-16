@@ -10,11 +10,38 @@
     <nav class="w-full bg-white/70 backdrop-blur shadow-sm mb-4">
         <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
             <a href="{% url 'dashboard' %}" class="text-lg font-semibold text-indigo-600 hover:text-indigo-800 transition">🏠 Home</a>
-            <div class="text-sm text-gray-500">Legal App</div>
+            <div class="flex items-center gap-4 text-sm text-gray-600">
+                {% if request.user.is_authenticated %}
+                    {% if request.user.is_superuser or request.user.groups.all.0.name in 'ADMIN,CO-ADMIN' %}
+                        <a href="{% url 'sro_dashboard' %}" class="hover:text-indigo-700">SRO Dashboard</a>
+                    {% else %}
+                        {% if request.user.employee and request.user.employee.employee_type == 'sro' %}
+                            <a href="{% url 'sro_dashboard' %}" class="hover:text-indigo-700">SRO Dashboard</a>
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+                <span class="text-gray-400">Legal App</span>
+            </div>
         </div>
     </nav>
     <div class="max-w-7xl mx-auto">
+        {% if messages %}
+        <div class="px-4">
+            {% for message in messages %}
+                {% if 'error' in message.tags %}
+                    <div class="mb-3 rounded-lg border border-red-200 bg-red-50 text-red-700 px-4 py-2">{{ message }}</div>
+                {% elif 'success' in message.tags %}
+                    <div class="mb-3 rounded-lg border border-green-200 bg-green-50 text-green-700 px-4 py-2">{{ message }}</div>
+                {% elif 'warning' in message.tags %}
+                    <div class="mb-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 px-4 py-2">{{ message }}</div>
+                {% else %}
+                    <div class="mb-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 px-4 py-2">{{ message }}</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
         {% block content %}{% endblock %}
     </div>
 </body>
+{% block scripts %}{% endblock %}
 </html>

@@ -1,99 +1,185 @@
-{% extends 'cases/base.html' %}
+{% extends 'accounts/admin_base.html' %}
 {% block title %}Work On Case{% endblock %}
 {% block content %}
-<div class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow">
-  <h2 class="text-2xl font-bold mb-4">Work on Case: {{ case.case_number }}</h2>
-  {% if messages %}
-    <div class="mb-4">
-      {% for message in messages %}
-        <div class="{% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} p-3 rounded">
-          {{ message }}
-        </div>
-      {% endfor %}
+<style>
+  .form-control { 
+    width: 100%; 
+    border: 1px solid rgba(255, 255, 255, 0.4); 
+    border-radius: 0.5rem; 
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    backdrop-filter: blur(10px);
+    font-weight: 500;
+  }
+  .form-control::placeholder {
+    color: rgba(31, 41, 55, 0.6);
+  }
+  .form-control:focus {
+    outline: none;
+    border-color: #1e3a8a;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  }
+  select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%231f2937' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    color: #1f2937;
+    font-weight: 600;
+  }
+  select.form-control option {
+    background: white;
+    color: #1f2937;
+    font-weight: 500;
+    padding: 0.5rem;
+  }
+  label {
+    color: white;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+</style>
+
+<div class="max-w-4xl mx-auto">
+  <div class="bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/30">
+    <div class="flex items-center mb-6">
+      <div class="bg-white/20 backdrop-blur-sm p-3 rounded-xl mr-4 border border-white/30">
+        <i class="fas fa-briefcase text-3xl text-white"></i>
+      </div>
+      <div>
+        <h2 class="text-3xl font-bold text-white">Work on Case</h2>
+        <p class="text-purple-100">{{ case.case_number }}</p>
+      </div>
     </div>
-  {% endif %}
-  <form method="post" class="space-y-6">
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-    <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
-      {{ form.non_field_errors }}
+
+    {% if case.status == 'document_pending' or case.status == 'sro_document_pending' %}
+    <div class="mb-6 bg-blue-500/30 border border-blue-400/60 text-white p-4 rounded-xl backdrop-blur-md">
+      SRO receipt uploaded. Please
+      <a class="text-blue-100 underline font-semibold" href="{% url 'case_upload_document' case.id %}">upload the final document</a>
+      and then
+      <a class="text-purple-100 underline font-semibold" href="{% url 'case_action' case.id %}">finalize the case</a>.
     </div>
     {% endif %}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    
+    {% if messages %}
+      <div class="mb-6">
+        {% for message in messages %}
+          <div class="{% if message.tags == 'error' %}bg-red-500/30 border-red-400/60 text-white{% else %}bg-green-500/30 border-green-400/60 text-white{% endif %} p-4 rounded-xl border backdrop-blur-md">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="bg-red-500/30 border border-red-400/60 text-white p-4 rounded-xl backdrop-blur-md">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="col-span-2">
-        {{ form.property_address.label_tag }} 
+        {{ form.property_address.label_tag }}
         {{ form.property_address }}
-        {% if form.property_address.errors %}
-        <div class="text-red-600 text-sm mt-1">{{ form.property_address.errors }}</div>
-        {% endif %}
+        {% if form.property_address.errors %}<div class="text-red-300 text-sm mt-2 bg-red-500/20 p-2 rounded">{{ form.property_address.errors }}</div>{% endif %}
       </div>
-      
       <div>
-        {{ form.state.label_tag }} 
+        {{ form.state.label_tag }}
         {{ form.state }}
-        {% if form.state.errors %}
-        <div class="text-red-600 text-sm mt-1">{{ form.state.errors }}</div>
-        {% endif %}
+        {% if form.state.errors %}<div class="text-red-300 text-sm mt-2 bg-red-500/20 p-2 rounded">{{ form.state.errors }}</div>{% endif %}
       </div>
-      
       <div>
-        {{ form.district.label_tag }} 
+        {{ form.district.label_tag }}
         {{ form.district }}
-        {% if form.district.errors %}
-        <div class="text-red-600 text-sm mt-1">{{ form.district.errors }}</div>
-        {% endif %}
+        {% if form.district.errors %}<div class="text-red-300 text-sm mt-2 bg-red-500/20 p-2 rounded">{{ form.district.errors }}</div>{% endif %}
       </div>
-      
       <div>
-        {{ form.tehsil.label_tag }} 
+        {{ form.tehsil.label_tag }}
         {{ form.tehsil }}
-        {% if form.tehsil.errors %}
-        <div class="text-red-600 text-sm mt-1">{{ form.tehsil.errors }}</div>
-        {% endif %}
+        {% if form.tehsil.errors %}<div class="text-red-300 text-sm mt-2 bg-red-500/20 p-2 rounded">{{ form.tehsil.errors }}</div>{% endif %}
       </div>
-      
       <div>
-        {{ form.branch.label_tag }} 
+        {{ form.branch.label_tag }}
         {{ form.branch }}
-        {% if form.branch.errors %}
-        <div class="text-red-600 text-sm mt-1">{{ form.branch.errors }}</div>
-        {% endif %}
-      </div>
-      
-      <div>
-        {{ form.reference_name.label_tag }} 
-        {{ form.reference_name }}
-        {% if form.reference_name.errors %}
-        <div class="text-red-600 text-sm mt-1">{{ form.reference_name.errors }}</div>
-        {% endif %}
-      </div>
-      
-      <div>
-        {{ form.case_name.label_tag }} 
-        {{ form.case_name }}
-        {% if form.case_name.errors %}
-        <div class="text-red-600 text-sm mt-1">{{ form.case_name.errors }}</div>
-        {% endif %}
+        {% if form.branch.errors %}<div class="text-red-300 text-sm mt-2 bg-red-500/20 p-2 rounded">{{ form.branch.errors }}</div>{% endif %}
       </div>
     </div>
-    <h3 class="text-xl font-semibold mt-6">Create Additional Property Cases</h3>
-    <p class="text-sm text-gray-600">Each address below will become a separate linked case on save. You can leave fields empty if not needed.</p>
-    <input type="hidden" name="extra_count" value="{{ extra_count }}" id="extra_count_field" />
-    <div id="extra-address-container" class="space-y-4">
-      {% for ef in extra_forms %}
-        <div class="border p-4 rounded bg-gray-50">
-          <label class="block text-sm font-medium mb-1">Additional Property Address (Optional)</label>
-          <textarea name="addr_{{ forloop.counter0 }}_property_address" rows="3" class="form-control w-full border rounded p-2" placeholder="Enter additional property address (leave empty if not needed)">{{ ef.data.property_address }}</textarea>
-        </div>
-      {% endfor %}
+    <div class="flex items-center mt-4 bg-white/15 backdrop-blur-sm p-4 rounded-xl border border-white/20">
+      {{ form.is_school_case }}
+      <label for="id_is_school_case" class="ml-3 text-sm text-white font-medium">This is a school case (warn if a similar case exists)</label>
     </div>
-    <button type="button" onclick="addAddressField()" class="w-full py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors duration-200">Add Another Address</button>
-    <button type="submit" class="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">Save Details</button>
+    <div class="bg-purple-500/20 border border-purple-400/40 text-purple-100 p-4 rounded-xl backdrop-blur-md">
+      <p class="text-sm"><i class="fas fa-info-circle mr-2"></i>Additional properties are now added during the Action step (Positive / Negative / Positive Subject to Search) and not here.</p>
+    </div>
+    <div class="flex gap-4">
+      <button type="submit" class="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-blue-700 transition-all shadow-lg">
+        <i class="fas fa-save mr-2"></i>Save Details
+      </button>
+      <a href="{% url 'case_detail' case.id %}" class="flex-1 py-3 text-center bg-white/20 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/30 hover:bg-white/30 transition-all">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Case
+      </a>
+    </div>
   </form>
-  <div class="mt-4">
-    <a href="{% url 'case_detail' case.id %}" class="text-blue-600 underline">Back to Case</a>
   </div>
 </div>
+{% if duplicate_cases %}
+  <!-- Duplicate warning modal -->
+  <div id="dupModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm">
+    <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl max-w-3xl w-full p-8 border border-purple-300">
+      <h3 class="text-2xl font-bold mb-3 text-gray-900"><i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>Similar case(s) found</h3>
+      <p class="text-sm text-gray-700 mb-5">We found the following case(s) with same Applicant, Tehsil and/or District. Please review to avoid duplicate entries.</p>
+      <div class="max-h-80 overflow-y-auto border border-gray-300 rounded-xl">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white sticky top-0">
+            <tr>
+              <th class="text-left p-3 font-semibold">Case No</th>
+              <th class="text-left p-3 font-semibold">Applicant</th>
+              <th class="text-left p-3 font-semibold">Tehsil</th>
+              <th class="text-left p-3 font-semibold">District</th>
+              <th class="text-left p-3 font-semibold">LRN</th>
+              <th class="text-left p-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white">
+            {% for c in duplicate_cases %}
+            <tr class="border-t border-gray-200 hover:bg-purple-50">
+              <td class="p-3 text-gray-900">{{ c.case_number }}</td>
+              <td class="p-3 text-gray-900">{{ c.applicant_name }}</td>
+              <td class="p-3 text-gray-700">{{ c.tehsil|default:'-' }}</td>
+              <td class="p-3 text-gray-700">{{ c.district|default:'-' }}</td>
+              <td class="p-3 text-gray-700">{{ c.legal_reference_number|default:'-' }}</td>
+              <td class="p-3"><a href="{% url 'case_detail' c.id %}" target="_blank" class="text-indigo-600 font-semibold hover:underline">Open</a></td>
+            </tr>
+            {% empty %}
+            <tr><td class="p-4 text-center text-gray-500" colspan="6">No duplicates.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button onclick="document.getElementById('dupModal').remove()" class="px-5 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-all">Cancel</button>
+        <form method="post">
+          {% csrf_token %}
+          {# Re-post the same values: use JS to copy current form #}
+          <input type="hidden" name="property_address" value="{{ form.data.property_address }}">
+          <input type="hidden" name="state" value="{{ form.data.state }}">
+          <input type="hidden" name="district" value="{{ form.data.district }}">
+          <input type="hidden" name="tehsil" value="{{ form.data.tehsil }}">
+          <input type="hidden" name="branch" value="{{ form.data.branch }}">
+          <input type="hidden" name="is_school_case" value="on">
+          <input type="hidden" name="save_anyway" value="1">
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold hover:from-indigo-700 hover:to-blue-700 transition-all shadow-lg">Save anyway</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
 <script>
 function addAddressField(){
   const container = document.getElementById('extra-address-container');
@@ -105,5 +191,90 @@ function addAddressField(){
   container.appendChild(div);
   countField.value = idx + 1;
 }
+
+// Cascading dropdowns for State -> District -> Tehsil using JSON endpoints
+;(function(){
+  const stateSel = document.getElementById('id_state');
+  const districtSel = document.getElementById('id_district');
+  const tehsilSel = document.getElementById('id_tehsil');
+  const branchSel = document.getElementById('id_branch');
+  if(!stateSel || !districtSel || !tehsilSel) return;
+
+  async function fetchJSON(url){ const r = await fetch(url); return r.ok ? r.json() : {results: []}; }
+  function resetSelect(sel, placeholder){
+    while(sel.options.length) sel.remove(0);
+    const ph = document.createElement('option'); ph.value=''; ph.textContent=placeholder; sel.appendChild(ph);
+  }
+
+  async function loadDistricts(){
+    resetSelect(districtSel, 'Select District');
+    resetSelect(tehsilSel, 'Select Tehsil');
+    const st = stateSel.value;
+    if(!st) return;
+    const data = await fetchJSON(`/cases/api/locations/districts/?state_name=${encodeURIComponent(st)}`);
+    (data.results||[]).forEach(item=>{
+      const opt = document.createElement('option');
+      opt.value = item.label.split(' (')[0];
+      opt.textContent = item.label.split(' (')[0];
+      districtSel.appendChild(opt);
+    });
+  }
+
+  async function loadTehsils(){
+    resetSelect(tehsilSel, 'Select Tehsil');
+    const st = stateSel.value; const dist = districtSel.value;
+    if(!st || !dist) return;
+    const params = new URLSearchParams({ state_name: st, district_name: dist });
+    const data = await fetchJSON(`/cases/api/locations/tehsils/?${params.toString()}`);
+    (data.results||[]).forEach(item=>{
+      const name = item.label.split(' (')[0];
+      const opt = document.createElement('option'); opt.value = name; opt.textContent = name; tehsilSel.appendChild(opt);
+    });
+  }
+
+  stateSel.addEventListener('change', loadDistricts);
+  districtSel.addEventListener('change', loadTehsils);
+
+  // Client-side branch filtering by selected state
+  const originalBranchOptions = branchSel ? Array.from(branchSel.options).map(o=>({value:o.value,text:o.text})) : [];
+  function filterBranches(){
+    if(!branchSel) return;
+    const st = stateSel.value;
+    const selectedVal = branchSel.value;
+    while(branchSel.options.length) branchSel.remove(0);
+    originalBranchOptions.forEach(({value,text})=>{
+      // Expect option text like "Branch Name" or "Branch Name"; we don't control text format including state
+      // Use data-state attribute if present else include all, server already narrows queryset by state when available.
+      const opt = document.createElement('option');
+      opt.value = value; opt.textContent = text; branchSel.appendChild(opt);
+    });
+    // If server has already pre-filtered by state, this will simply keep the list as-is.
+    // Otherwise, we can optionally prune using a suffix pattern "(State)" if included in text.
+    if(st){
+      const opts = Array.from(branchSel.options);
+      const want = st.trim().toLowerCase();
+      opts.forEach(opt=>{
+        // Try to infer state from option text like "Branch (Bank, State)" or "Branch — State" or "Branch - State"
+        const txt = (opt.text||'');
+        let inferred = null;
+        const paren = txt.match(/\(([^)]+)\)\s*$/);
+        if(paren && paren[1]){
+          // Take last segment after comma
+          const parts = paren[1].split(',');
+          inferred = parts[parts.length-1].trim().toLowerCase();
+        } else {
+          const emdash = txt.match(/—\s*(.*)$/);
+          const dash = txt.match(/-\s*(.*)$/);
+          inferred = (emdash && emdash[1] || dash && dash[1] || '').trim().toLowerCase() || null;
+        }
+        if(inferred && inferred !== want){ opt.remove(); }
+      });
+    }
+    // restore selection if still present
+    const found = Array.from(branchSel.options).some(o=>o.value===selectedVal);
+    if(found) branchSel.value = selectedVal;
+  }
+  if(branchSel){ filterBranches(); stateSel.addEventListener('change', filterBranches); }
+})();
 </script>
 {% endblock %}

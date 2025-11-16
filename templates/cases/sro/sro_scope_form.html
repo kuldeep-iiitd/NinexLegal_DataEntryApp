@@ -1,0 +1,73 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit SRO Scope</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50 p-6">
+  <div class="max-w-5xl mx-auto bg-white shadow rounded-2xl p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-bold">Edit SRO Scope: {{ sro.name }} ({{ sro.employee_id }})</h1>
+      <a href="{% url 'sro_manage' %}" class="text-sm text-indigo-600 hover:underline">Back to SRO Management</a>
+    </div>
+
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+
+      <div class="flex items-center gap-3">
+        {{ form.is_super_sro }}
+        <label for="id_is_super_sro" class="font-medium">Super SRO (access to all locations)</label>
+      </div>
+      <p class="text-sm text-gray-500">Uncheck to limit by specific States, Districts, or Tehsils.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Allowed States</label>
+          <div class="flex justify-between mb-2 text-xs">
+            <button type="button" class="text-indigo-600" onclick="selectAll('id_allowed_states')">Select All</button>
+            <button type="button" class="text-gray-600" onclick="clearAll('id_allowed_states')">Clear</button>
+          </div>
+          {{ form.allowed_states }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Allowed Districts</label>
+          <div class="flex justify-between mb-2 text-xs">
+            <button type="button" class="text-indigo-600" onclick="selectAll('id_allowed_districts')">Select All</button>
+            <button type="button" class="text-gray-600" onclick="clearAll('id_allowed_districts')">Clear</button>
+          </div>
+          {{ form.allowed_districts }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Allowed Tehsils</label>
+          <div class="flex justify-between mb-2 text-xs">
+            <button type="button" class="text-indigo-600" onclick="selectAll('id_allowed_tehsils')">Select All</button>
+            <button type="button" class="text-gray-600" onclick="clearAll('id_allowed_tehsils')">Clear</button>
+          </div>
+          {{ form.allowed_tehsils }}
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded">Save</button>
+        <a href="{% url 'sro_manage' %}" class="px-6 py-2 bg-gray-200 text-gray-800 rounded">Cancel</a>
+      </div>
+    </form>
+
+  </div>
+  <script>
+    function selectAll(id){
+      const sel = document.getElementById(id);
+      if(!sel) return;
+      for (let i=0; i<sel.options.length; i++){ sel.options[i].selected = true; }
+    }
+    function clearAll(id){
+      const sel = document.getElementById(id);
+      if(!sel) return;
+      for (let i=0; i<sel.options.length; i++){ sel.options[i].selected = false; }
+    }
+  </script>
+</body>
+</html>

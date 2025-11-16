@@ -1,0 +1,94 @@
+{% extends 'accounts/admin_base.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ title }}</h1>
+    <p class="text-gray-600">Manage tehsil information</p>
+  </div>
+
+  <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+      
+      {% if form.non_field_errors %}
+        <div class="px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-200">
+          <i class="fas fa-exclamation-circle mr-2"></i>{{ form.non_field_errors }}
+        </div>
+      {% endif %}
+      
+      <div>
+        <label class="block text-sm font-medium mb-2 text-gray-700">
+          <i class="fas fa-map-marked-alt text-purple-600 mr-2"></i>State
+        </label>
+        {{ form.state }}
+        {% if form.state.errors %}
+          <p class="text-red-600 text-sm mt-1">{{ form.state.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-2 text-gray-700">
+          <i class="fas fa-map-marker-alt text-purple-600 mr-2"></i>District
+        </label>
+        {{ form.district }}
+        {% if form.district.errors %}
+          <p class="text-red-600 text-sm mt-1">{{ form.district.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-2 text-gray-700">
+          <i class="fas fa-map-pin text-purple-600 mr-2"></i>Tehsil Name
+        </label>
+        {{ form.name }}
+        {% if form.name.errors %}
+          <p class="text-red-600 text-sm mt-1">{{ form.name.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      
+      <div class="flex gap-4">
+        <button type="submit" class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl shadow-lg font-semibold transition-all">
+          <i class="fas fa-save mr-2"></i>Save
+        </button>
+        <a href="{% url 'locations_tehsils_list' %}" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl shadow font-semibold transition-all">
+          <i class="fas fa-times mr-2"></i>Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+  // Enhance District options when State changes
+  (function(){
+    const stateSel = document.getElementById('id_state');
+    const districtSel = document.getElementById('id_district');
+    if(!stateSel || !districtSel) return;
+    async function refreshDistricts(){
+      const sid = stateSel.value;
+      // If no state chosen, keep existing options
+      if(!sid){ return; }
+      try{
+        const res = await fetch(`/cases/api/locations/districts/?state=${encodeURIComponent(sid)}`);
+        const data = await res.json();
+        const results = Array.isArray(data.results) ? data.results : [];
+        // Clear
+        while(districtSel.options.length > 0) districtSel.remove(0);
+        // Add placeholder
+        const ph = document.createElement('option');
+        ph.value=''; ph.textContent='Select District'; districtSel.appendChild(ph);
+        results.forEach(row => {
+          const opt = document.createElement('option');
+          opt.value = row.id; opt.textContent = row.label.split(' (')[0];
+          districtSel.appendChild(opt);
+        });
+      }catch(e){ console.warn('Failed to load districts', e); }
+    }
+    stateSel.addEventListener('change', refreshDistricts);
+  })();
+</script>
+{% endblock %}
+{% endblock %}

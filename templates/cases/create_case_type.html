@@ -1,20 +1,58 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Case Type</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
-    <div class="w-full max-w-md mx-auto p-6 bg-white rounded-2xl shadow-xl flex flex-col gap-6">
-        <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Create Case Type</h2>
-        <form method="post" class="flex flex-col gap-4">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition">Create</button>
-        </form>
-        <a href="{% url 'dashboard' %}" class="text-blue-600 hover:underline text-center mt-4">Back to Dashboard</a>
+{% extends 'accounts/admin_base.html' %}
+{% block title %}Create Case Type{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="mb-6 flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800 mb-2">Create Case Type</h1>
+      <p class="text-gray-600">Add a new case type to the system</p>
     </div>
-</body>
-</html>
+    <div class="flex gap-2">
+      <a href="{% url 'view_case_types' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg shadow font-medium transition-all">
+        <i class="fas fa-list mr-2"></i>All Case Types
+      </a>
+      <a href="{% url 'dashboard' %}" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg shadow font-medium transition-all">
+        <i class="fas fa-arrow-left mr-2"></i>Dashboard
+      </a>
+    </div>
+  </div>
+
+  <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+      
+      <div>
+        <label class="block text-sm font-medium mb-2 text-gray-700">
+          <i class="fas fa-tags text-blue-600 mr-2"></i>Case Type Name
+        </label>
+        {{ form.name }}
+        {% if form.name.errors %}
+          <p class="text-red-600 text-sm mt-1">{{ form.name.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+
+      {% if form.description %}
+      <div>
+        <label class="block text-sm font-medium mb-2 text-gray-700">
+          <i class="fas fa-align-left text-blue-600 mr-2"></i>Description (optional)
+        </label>
+        {{ form.description }}
+        {% if form.description.errors %}
+          <p class="text-red-600 text-sm mt-1">{{ form.description.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+      
+      <div class="flex gap-4 pt-4">
+        <button type="submit" class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg transition-all">
+          <i class="fas fa-save mr-2"></i>Create Case Type
+        </button>
+        <a href="{% url 'view_case_types' %}" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-xl shadow transition-all">
+          <i class="fas fa-times mr-2"></i>Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

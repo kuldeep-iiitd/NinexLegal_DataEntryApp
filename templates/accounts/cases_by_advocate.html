@@ -1,0 +1,242 @@
+{% extends 'accounts/admin_base.html' %}
+{% block title %}Cases - {{ advocate.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+  <!-- Header -->
+  <div class="mb-6">
+    <a href="{% url 'dashboard' %}" class="inline-flex items-center text-purple-600 hover:text-purple-700 font-semibold mb-4">
+      <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+    </a>
+    <div class="glass-effect rounded-2xl p-6 mb-6">
+      <div class="flex items-center">
+        <div class="h-16 w-16 rounded-xl bg-gradient-to-br from-purple-400 via-pink-400 to-red-400 flex items-center justify-center text-white font-black text-2xl mr-4 shadow-lg">
+          {{ advocate.name|first|upper }}
+        </div>
+        <div class="flex-1">
+          <h1 class="text-2xl font-bold text-gray-800">{{ advocate.name }}</h1>
+          <p class="text-gray-600">{{ advocate.employee_id }} • Advocate</p>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-indigo-600">{{ total_count }}</div>
+            <div class="text-xs text-gray-500">Total</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-orange-600">{{ pending_count }}</div>
+            <div class="text-xs text-gray-500">Pending</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-green-600">{{ completed_count }}</div>
+            <div class="text-xs text-gray-500">Completed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="mb-6">
+    <div class="border-b border-gray-200">
+      <nav class="-mb-px flex space-x-8">
+        <button onclick="showTab('all')" id="tab-all" class="tab-button active border-b-2 border-purple-600 py-4 px-1 text-sm font-medium text-purple-600">
+          All Cases ({{ total_count }})
+        </button>
+        <button onclick="showTab('pending')" id="tab-pending" class="tab-button border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
+          Pending ({{ pending_count }})
+        </button>
+        <button onclick="showTab('completed')" id="tab-completed" class="tab-button border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
+          Completed ({{ completed_count }})
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- All Cases -->
+  <div id="content-all" class="tab-content">
+    <div class="stat-card">
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead>
+            <tr class="border-b-2 border-purple-200 bg-purple-50">
+              <th class="text-left p-4 font-bold text-gray-700">Case Number</th>
+              <th class="text-left p-4 font-bold text-gray-700">Applicant</th>
+              <th class="text-left p-4 font-bold text-gray-700">Bank</th>
+              <th class="text-center p-4 font-bold text-gray-700">Status</th>
+              <th class="text-left p-4 font-bold text-gray-700">LRN</th>
+              <th class="text-center p-4 font-bold text-gray-700">Updated</th>
+              <th class="text-center p-4 font-bold text-gray-700">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for case in all_cases %}
+            <tr class="border-b border-gray-100 hover:bg-purple-50 transition-colors">
+              <td class="p-4">
+                <div class="font-semibold text-gray-800">{{ case.case_number }}</div>
+                {% if case.child_cases.exists %}
+                <div class="text-xs text-blue-600"><i class="fas fa-layer-group mr-1"></i>{{ case.child_cases.count }} linked</div>
+                {% endif %}
+              </td>
+              <td class="p-4 text-gray-800">{{ case.applicant_name }}</td>
+              <td class="p-4">
+                <div class="text-gray-800">{{ case.bank.name }}</div>
+                {% if case.branch %}<div class="text-xs text-gray-500">{{ case.branch.name }}</div>{% endif %}
+              </td>
+              <td class="p-4 text-center">
+                <span class="text-xs px-2 py-1 rounded {% if case.status == 'positive' %}bg-green-100 text-green-700{% elif case.status == 'negative' %}bg-red-100 text-red-700{% elif case.status == 'pending' %}bg-purple-100 text-purple-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                  {{ case.get_status_display }}
+                </span>
+              </td>
+              <td class="p-4">
+                {% if case.legal_reference_number %}
+                <code class="text-xs bg-gray-100 px-2 py-1 rounded">{{ case.legal_reference_number }}</code>
+                {% else %}
+                <span class="text-gray-400 text-xs">--</span>
+                {% endif %}
+              </td>
+              <td class="p-4 text-center text-sm text-gray-600">{{ case.updated_at|date:"M d, Y" }}</td>
+              <td class="p-4 text-center">
+                <a href="{% url 'case_detail' case.id %}" class="inline-flex items-center px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition-colors">
+                  <i class="fas fa-eye mr-1"></i>View
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td class="p-12 text-center text-gray-400" colspan="7">No cases found</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Cases -->
+  <div id="content-pending" class="tab-content hidden">
+    <div class="stat-card">
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead>
+            <tr class="border-b-2 border-orange-200 bg-orange-50">
+              <th class="text-left p-4 font-bold text-gray-700">Case Number</th>
+              <th class="text-left p-4 font-bold text-gray-700">Applicant</th>
+              <th class="text-left p-4 font-bold text-gray-700">Bank</th>
+              <th class="text-center p-4 font-bold text-gray-700">Status</th>
+              <th class="text-center p-4 font-bold text-gray-700">Updated</th>
+              <th class="text-center p-4 font-bold text-gray-700">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for case in pending_cases %}
+            <tr class="border-b border-gray-100 hover:bg-orange-50 transition-colors">
+              <td class="p-4">
+                <div class="font-semibold text-gray-800">{{ case.case_number }}</div>
+                {% if case.child_cases.exists %}
+                <div class="text-xs text-blue-600"><i class="fas fa-layer-group mr-1"></i>{{ case.child_cases.count }} linked</div>
+                {% endif %}
+              </td>
+              <td class="p-4 text-gray-800">{{ case.applicant_name }}</td>
+              <td class="p-4">
+                <div class="text-gray-800">{{ case.bank.name }}</div>
+                {% if case.branch %}<div class="text-xs text-gray-500">{{ case.branch.name }}</div>{% endif %}
+              </td>
+              <td class="p-4 text-center">
+                <span class="text-xs px-2 py-1 rounded bg-orange-100 text-orange-700">{{ case.get_status_display }}</span>
+              </td>
+              <td class="p-4 text-center text-sm text-gray-600">{{ case.updated_at|date:"M d, Y" }}</td>
+              <td class="p-4 text-center">
+                <a href="{% url 'case_detail' case.id %}" class="inline-flex items-center px-3 py-1 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold transition-colors">
+                  <i class="fas fa-eye mr-1"></i>View
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td class="p-12 text-center text-gray-400" colspan="6">No pending cases</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Completed Cases -->
+  <div id="content-completed" class="tab-content hidden">
+    <div class="stat-card">
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead>
+            <tr class="border-b-2 border-green-200 bg-green-50">
+              <th class="text-left p-4 font-bold text-gray-700">Case Number</th>
+              <th class="text-left p-4 font-bold text-gray-700">Applicant</th>
+              <th class="text-left p-4 font-bold text-gray-700">Bank</th>
+              <th class="text-center p-4 font-bold text-gray-700">Status</th>
+              <th class="text-left p-4 font-bold text-gray-700">LRN</th>
+              <th class="text-center p-4 font-bold text-gray-700">Completed</th>
+              <th class="text-center p-4 font-bold text-gray-700">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for case in completed_cases %}
+            <tr class="border-b border-gray-100 hover:bg-green-50 transition-colors">
+              <td class="p-4">
+                <div class="font-semibold text-gray-800">{{ case.case_number }}</div>
+                {% if case.child_cases.exists %}
+                <div class="text-xs text-blue-600"><i class="fas fa-layer-group mr-1"></i>{{ case.child_cases.count }} linked</div>
+                {% endif %}
+              </td>
+              <td class="p-4 text-gray-800">{{ case.applicant_name }}</td>
+              <td class="p-4">
+                <div class="text-gray-800">{{ case.bank.name }}</div>
+                {% if case.branch %}<div class="text-xs text-gray-500">{{ case.branch.name }}</div>{% endif %}
+              </td>
+              <td class="p-4 text-center">
+                <span class="text-xs px-2 py-1 rounded {% if case.status == 'positive' %}bg-green-100 text-green-700{% elif case.status == 'negative' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                  {{ case.get_status_display }}
+                </span>
+              </td>
+              <td class="p-4">
+                {% if case.legal_reference_number %}
+                <code class="text-xs bg-gray-100 px-2 py-1 rounded">{{ case.legal_reference_number }}</code>
+                {% else %}
+                <span class="text-gray-400 text-xs">--</span>
+                {% endif %}
+              </td>
+              <td class="p-4 text-center text-sm text-gray-600">{{ case.updated_at|date:"M d, Y" }}</td>
+              <td class="p-4 text-center">
+                <a href="{% url 'case_detail' case.id %}" class="inline-flex items-center px-3 py-1 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors">
+                  <i class="fas fa-eye mr-1"></i>View
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td class="p-12 text-center text-gray-400" colspan="7">No completed cases</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.classList.remove('active', 'border-purple-600', 'text-purple-600');
+    btn.classList.add('border-transparent', 'text-gray-500');
+  });
+  
+  // Show selected tab
+  document.getElementById('content-' + tabName).classList.remove('hidden');
+  const activeBtn = document.getElementById('tab-' + tabName);
+  activeBtn.classList.add('active', 'border-purple-600', 'text-purple-600');
+  activeBtn.classList.remove('border-transparent', 'text-gray-500');
+}
+</script>
+{% endblock %}

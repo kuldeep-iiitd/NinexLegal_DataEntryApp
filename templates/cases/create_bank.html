@@ -1,21 +1,152 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Bank</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
-    <div class="w-full max-w-md mx-auto p-6 bg-white rounded-2xl shadow-xl flex flex-col gap-6">
-        <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Create Bank</h2>
-        <form method="post" class="flex flex-col gap-4">
+{% extends 'cases/base.html' %}
+
+{% block title %}Create Bank{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-8">
+    <div class="w-full max-w-3xl mx-auto p-6 bg-white rounded-2xl shadow-xl">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Create Bank</h2>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition">Create Bank</button>
+
+            <!-- Bank Basic Fields -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}<p class="text-sm text-red-600">{{ form.name.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                    {{ form.state }}
+                    {% if form.state.errors %}<p class="text-sm text-red-600">{{ form.state.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <!-- Case Types & Fees -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">Assign Case Types & Fees</h3>
+                {% if case_type_formset %}
+                    {{ case_type_formset.management_form }}
+                    {% if case_type_formset.non_form_errors %}
+                        <div class="text-sm text-red-600 mb-2">{{ case_type_formset.non_form_errors }}</div>
+                    {% endif %}
+                    <div id="case-type-forms" class="space-y-2">
+                        {% for form in case_type_formset %}
+                            <div class="case-type-form grid grid-cols-12 gap-2 items-center border rounded p-2">
+                                {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <div class="col-span-6">{{ form.case_type }}</div>
+                                <div class="col-span-4">{{ form.fee }}</div>
+                                <div class="col-span-2 flex items-center justify-end gap-2">
+                                    {% if form.instance.pk %}
+                                        {{ form.DELETE }} <label class="text-red-600">Remove</label>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" onclick="addCaseTypeForm()" class="mt-2 inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">Add Case Type</button>
+                {% endif %}
+            </div>
+
+            <!-- Documents -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">Upload Documents</h3>
+                {% if document_formset %}
+                    {{ document_formset.management_form }}
+                    {% if document_formset.non_form_errors %}
+                        <div class="text-sm text-red-600 mb-2">{{ document_formset.non_form_errors }}</div>
+                    {% endif %}
+                    <div id="document-forms" class="space-y-2">
+                        {% for doc_form in document_formset %}
+                            <div class="document-form grid grid-cols-12 gap-2 items-center border rounded p-2">
+                                {% for hidden in doc_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <div class="col-span-5">
+                                    {{ doc_form.name }}
+                                    {% if doc_form.name.errors %}<p class="text-xs text-red-600 mt-1">{{ doc_form.name.errors|join:', ' }}</p>{% endif %}
+                                </div>
+                                <div class="col-span-5">
+                                    {{ doc_form.file }}
+                                    {% if doc_form.file.errors %}<p class="text-xs text-red-600 mt-1">{{ doc_form.file.errors|join:', ' }}</p>{% endif %}
+                                </div>
+                                <div class="col-span-2 flex items-center justify-end gap-2">
+                                    {% if doc_form.instance.pk %}
+                                        {{ doc_form.DELETE }} <label class="text-red-600">Remove</label>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" onclick="addDocumentForm()" class="mt-2 inline-flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">Add Document</button>
+                {% endif %}
+            </div>
+
+
+            <div class="pt-2">
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow">Create Bank</button>
+            </div>
         </form>
-        <a href="{% url 'view_banks' %}" class="text-blue-600 hover:underline text-center mt-4">View All Banks</a>
-        <a href="{% url 'dashboard' %}" class="text-gray-600 hover:underline text-center mt-2">Back to Dashboard</a>
+
+        <div class="mt-6 flex items-center justify-between text-sm">
+            <a href="{% url 'view_banks' %}" class="text-indigo-600 hover:underline">View All Banks</a>
+            <a href="{% url 'dashboard' %}" class="text-gray-600 hover:underline">Back to Dashboard</a>
+        </div>
     </div>
-</body>
-</html>
+</div>
+
+<script>
+    function addCaseTypeForm() {
+        const formContainer = document.getElementById('case-type-forms');
+        const totalForms = document.getElementById('id_casetype-TOTAL_FORMS');
+        const formCount = parseInt(totalForms.value);
+
+        const newForm = document.createElement('div');
+        newForm.className = 'case-type-form grid grid-cols-12 gap-2 items-center border rounded p-2';
+        newForm.innerHTML = `
+            <input type="hidden" name="casetype-${formCount}-id" id="id_casetype-${formCount}-id">
+            <div class="col-span-6">
+                <select name="casetype-${formCount}-case_type" class="w-full border rounded p-2" id="id_casetype-${formCount}-case_type">
+                    <option value="">---------</option>
+                    {% for case_type in case_types %}
+                        <option value="{{ case_type.id }}">{{ case_type.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-span-4">
+                <input type="number" name="casetype-${formCount}-fee" step="0.01" class="w-full border rounded p-2" id="id_casetype-${formCount}-fee" placeholder="Fee">
+            </div>
+            <div class="col-span-2 flex items-center justify-end gap-2">
+                <!-- Delete not shown for new rows -->
+            </div>
+        `;
+        formContainer.appendChild(newForm);
+        totalForms.value = formCount + 1;
+    }
+
+    function addDocumentForm() {
+        const formContainer = document.getElementById('document-forms');
+        const totalForms = document.getElementById('id_document-TOTAL_FORMS');
+        const formCount = parseInt(totalForms.value);
+
+        const newForm = document.createElement('div');
+        newForm.className = 'document-form grid grid-cols-12 gap-2 items-center border rounded p-2';
+        newForm.innerHTML = `
+            <input type="hidden" name="document-${formCount}-id" id="id_document-${formCount}-id">
+            <div class="col-span-5">
+                <input type="text" name="document-${formCount}-name" class="w-full border rounded p-2" placeholder="Document Name">
+            </div>
+            <div class="col-span-5">
+                <input type="file" name="document-${formCount}-file" class="w-full border rounded p-2">
+            </div>
+            <div class="col-span-2 flex items-center justify-end gap-2">
+                <!-- Delete not shown for new rows -->
+            </div>
+        `;
+        formContainer.appendChild(newForm);
+        totalForms.value = formCount + 1;
+    }
+
+    // Extra Charges removed
+</script>
+{% endblock %}

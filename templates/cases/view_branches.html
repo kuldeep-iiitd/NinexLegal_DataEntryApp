@@ -40,30 +40,6 @@
                 <span class="text-sm font-medium text-blue-600">Bank: {{ branch.bank.name }}</span>
                 {% endif %}
 
-                <div class="mt-3 bg-gray-50 p-3 rounded-lg">
-                    <div class="flex justify-between items-center">
-                        <span class="font-semibold text-purple-700">Assigned Case Types & Fees:</span>
-                        <a href="{% url 'assign_case_type' branch.pk %}" class="text-sm py-1 px-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded shadow-sm transition">
-                            Assign New
-                        </a>
-                    </div>
-                    <ul class="mt-2 divide-y divide-gray-100">
-                        {% for bct in branch.branch_case_types.all %}
-                        <li class="flex items-center justify-between py-2">
-                            <span class="font-medium">{{ bct.case_type.name }} - ₹{{ bct.fee }}</span>
-                            <div class="flex items-center">
-                                <a href="{% url 'edit_branch_case_type' bct.pk %}" class="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded text-sm">Edit</a>
-                                <form method="post" action="{% url 'delete_branch_case_type' bct.pk %}" class="inline ml-1">
-                                    {% csrf_token %}
-                                    <button type="submit" class="text-red-600 hover:bg-red-50 px-2 py-1 rounded text-sm">Delete</button>
-                                </form>
-                            </div>
-                        </li>
-                        {% empty %}
-                        <li class="text-gray-400 text-sm py-2">No case types assigned.</li>
-                        {% endfor %}
-                    </ul>
-                </div>
 
                 <div class="grid grid-cols-2 gap-3 mt-3">
                     <a href="{% url 'edit_branch' branch.pk %}" class="py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow transition text-center">Edit Branch</a>

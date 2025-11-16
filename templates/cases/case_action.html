@@ -1,57 +1,206 @@
-{% extends 'cases/base.html' %}
+{% extends 'accounts/admin_base.html' %}
 {% block title %}Case Action{% endblock %}
 {% block content %}
-<div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow">
-  <h2 class="text-2xl font-bold mb-4">Action for Case: {{ case.case_number }}</h2>
-  
-  {% if messages %}
-    <div class="mb-4">
-      {% for message in messages %}
-        <div class="{% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} p-3 rounded mb-2">
-          {{ message }}
-        </div>
-      {% endfor %}
+<style>
+  .form-control { 
+    width: 100%; 
+    border: 1px solid rgba(255, 255, 255, 0.4); 
+    border-radius: 0.5rem; 
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    backdrop-filter: blur(10px);
+    font-weight: 500;
+  }
+  .form-control::placeholder {
+    color: rgba(31, 41, 55, 0.6);
+  }
+  .form-control:focus {
+    outline: none;
+    border-color: #1e3a8a;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  }
+  select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%231f2937' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    color: #1f2937;
+    font-weight: 600;
+  }
+  select.form-control option {
+    background: white;
+    color: #1f2937;
+    font-weight: 500;
+    padding: 0.5rem;
+  }
+  label {
+    color: white;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+</style>
+
+<div class="max-w-3xl mx-auto">
+  <div class="bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/30">
+    <div class="flex items-center mb-6">
+      <div class="bg-white/20 backdrop-blur-sm p-3 rounded-xl mr-4 border border-white/30">
+        <i class="fas fa-bolt text-3xl text-white"></i>
+      </div>
+      <div>
+        <h2 class="text-3xl font-bold text-white">Take Action</h2>
+        <p class="text-purple-100">{{ case.case_number }}</p>
+      </div>
     </div>
-  {% endif %}
-  
-  <form method="post" class="space-y-4">
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-      <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
-        {{ form.non_field_errors }}
+
+    <!-- Guidance: work-before-final rule -->
+    <div class="bg-yellow-500/30 border border-yellow-400/60 text-white p-4 rounded-xl mb-6 backdrop-blur-md">
+      <p class="font-semibold mb-2"><i class="fas fa-exclamation-circle mr-2"></i>Important Guidelines</p>
+      <p class="text-sm text-yellow-50">Final actions (Positive / Positive Subject to Search / Negative) require completing case details first.
+      Please make sure Address, State, District, Tehsil, and Branch are filled in.
+      <a href="{% url 'work_on_case' case.id %}" class="underline font-semibold text-yellow-100">Go to Work on Case</a></p>
+    </div>
+    
+    {% if messages %}
+      <div class="mb-6">
+        {% for message in messages %}
+          <div class="{% if message.tags == 'error' %}bg-red-500/30 border-red-400/60 text-white{% else %}bg-green-500/30 border-green-400/60 text-white{% endif %} p-4 rounded-xl border backdrop-blur-md">
+            {{ message }}
+          </div>
+        {% endfor %}
       </div>
     {% endif %}
     
-    <div>
-      <label class="block font-semibold mb-1">Select Action</label>
-      {{ form.action }}
-      {% if form.action.errors %}
-        <div class="text-red-600 text-sm mt-1">{{ form.action.errors }}</div>
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="bg-red-500/30 border border-red-400/60 text-white p-4 rounded-xl backdrop-blur-md">
+          {{ form.non_field_errors }}
+        </div>
       {% endif %}
+      
+      <div class="bg-blue-500/20 border border-blue-400/40 text-blue-100 p-4 rounded-xl backdrop-blur-md">
+        <p class="text-sm"><i class="fas fa-info-circle mr-2"></i>Note: To finalize a case (Positive / Positive Subject to Search / Negative), please ensure the case details are complete
+        (Property Address, State, District, Tehsil, Branch). You can update them in
+        <a class="underline font-semibold text-blue-200" href="{% url 'work_on_case' case.id %}">Work on Case</a>.</p>
+      </div>
+      
+      <div>
+        <label class="block font-semibold mb-2">Select Action</label>
+        {{ form.action }}
+        {% if form.action.errors %}<div class="text-red-300 text-sm mt-2 bg-red-500/20 p-2 rounded">{{ form.action.errors }}</div>{% endif %}
+        <p class="text-xs text-purple-200 mt-2"><i class="fas fa-info-circle mr-1"></i>Note: Final actions require completed case details and a document upload (in the next step).</p>
+      </div>
+      
+      <div>
+        <label class="block font-semibold mb-2">Remark</label>
+        {{ form.remark }}
+        {% if form.remark.errors %}
+          <div class="text-red-300 text-sm mt-2 bg-red-500/20 p-2 rounded">{{ form.remark.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="flex items-center bg-white/15 backdrop-blur-sm p-4 rounded-xl border border-white/20">
+        {{ form.forward_to_sro }}
+        <label for="{{ form.forward_to_sro.id_for_label }}" class="ml-3 text-white text-sm font-medium">Forward to SRO now (Positive/Negative only). Positive Subject to Search forwards automatically.</label>
+        {% if form.forward_to_sro.errors %}<div class="text-red-300 text-sm mt-2 bg-red-500/20 p-2 rounded">{{ form.forward_to_sro.errors }}</div>{% endif %}
+      </div>
+
+
+      <div id="doc-upload-wrapper" class="hidden">
+        <div class="bg-yellow-500/20 border border-yellow-400/40 text-yellow-100 p-4 rounded-xl backdrop-blur-md">
+          <p class="text-sm"><i class="fas fa-file-upload mr-2"></i>After you submit a final action, the system will generate the LRN and take you to a mandatory document upload page.</p>
+        </div>
+      </div>
+
+      <!-- Additional properties moved post-finalization -->
+      
+    <div class="flex gap-4">
+      <button type="submit" class="flex-1 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg">
+        <i class="fas fa-check-circle mr-2"></i>Submit Action
+      </button>
+      <a href="{% url 'case_detail' case.id %}" class="flex-1 py-3 text-center bg-white/20 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/30 hover:bg-white/30 transition-all">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Case
+      </a>
     </div>
-    
-    <div>
-      <label class="block font-semibold mb-1">Remark</label>
-      {{ form.remark }}
-      {% if form.remark.errors %}
-        <div class="text-red-600 text-sm mt-1">{{ form.remark.errors }}</div>
-      {% endif %}
-      <p class="text-xs text-gray-500 mt-1">Required for Query, Hold, or Document Hold actions</p>
-    </div>
-    
-    <div class="flex items-center">
-      {{ form.forward_to_sro }} 
-      <label for="{{ form.forward_to_sro.id_for_label }}" class="ml-2">{{ form.forward_to_sro.label }}</label>
-      {% if form.forward_to_sro.errors %}
-        <div class="text-red-600 text-sm mt-1">{{ form.forward_to_sro.errors }}</div>
-      {% endif %}
-    </div>
-    
-    <button type="submit" class="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">Submit Action</button>
-  </form>
-  
-  <div class="mt-4 flex gap-4">
-    <a href="{% url 'case_detail' case.id %}" class="text-blue-600 underline">Back to Case</a>
+    </form>
   </div>
+</div>
+  <script>
+    function toggleDocField() {
+      const actionSelect = document.getElementById('{{ form.action.id_for_label }}');
+      const docWrap = document.getElementById('doc-upload-wrapper');
+      const value = actionSelect.value;
+      if(['positive','positive_subject_tosearch','negative'].includes(value)) {
+        docWrap.classList.remove('hidden');
+      } else {
+        docWrap.classList.add('hidden');
+      }
+    }
+    function toggleAdditionalProperty(){
+      const checkbox = document.getElementById('{{ form.add_additional_property.id_for_label }}');
+      const fields = document.getElementById('additional-property-fields');
+      if(checkbox.checked){
+        fields.classList.remove('hidden');
+      } else {
+        fields.classList.add('hidden');
+      }
+    }
+    function refreshPreview(){
+      const previewBox = document.getElementById('additional-preview');
+      const list = document.getElementById('additional-preview-list');
+      if(!previewBox || !list) return;
+      list.innerHTML='';
+      const groups = document.querySelectorAll('#additional-property-fields .additional-group');
+      let count=0;
+      groups.forEach(g=>{
+        const ta = g.querySelector('textarea');
+        if(ta && ta.value.trim()){ count++; list.insertAdjacentHTML('beforeend', `<li class='text-gray-600 truncate'>${count}. ${ta.value.trim().substring(0,120)}</li>`);} });
+      if(count>0){ previewBox.classList.remove('hidden'); } else { previewBox.classList.add('hidden'); }
+    }
+
+    function addAnotherPropertyGroup(){
+      const idx = parseInt(document.getElementById('additional_count').value, 10);
+      const container = document.getElementById('additional-groups-container');
+      const template = `
+        <div class="additional-group border-t pt-4" data-index="${idx}">
+          <div>
+            <label class="block text-sm font-medium">Additional Property Address</label>
+            <textarea name="additional_property_address_${idx}" rows="2" class="w-full border rounded p-2"></textarea>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+            <div>
+              <label class="block text-sm font-medium">State</label>
+              <select name="additional_state_${idx}" class="w-full border rounded p-2">${document.querySelector('[name="additional_state"]').innerHTML}</select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium">District</label>
+              <input type="text" name="additional_district_${idx}" class="w-full border rounded p-2" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Tehsil</label>
+              <input type="text" name="additional_tehsil_${idx}" class="w-full border rounded p-2" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Branch</label>
+              <select name="additional_branch_${idx}" class="w-full border rounded p-2">${document.querySelector('[name="additional_branch"]').innerHTML}</select>
+            </div>
+          </div>
+        </div>`;
+      container.insertAdjacentHTML('beforeend', template);
+      document.getElementById('additional_count').value = idx + 1;
+      refreshPreview();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const actionSelect = document.getElementById('{{ form.action.id_for_label }}');
+      if(actionSelect){ actionSelect.addEventListener('change', toggleDocField); toggleDocField(); }
+      // additional property UI removed here
+    });
+  </script>
 </div>
 {% endblock %}

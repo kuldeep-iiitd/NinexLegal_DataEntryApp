@@ -1,0 +1,518 @@
+{% extends 'accounts/admin_base.html' %}
+{% load static %}
+{% block title %}Billing - NinexLegal{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto p-6">
+  <!-- Page Header -->
+  <div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="bg-gradient-to-br from-blue-500 to-cyan-600 p-4 rounded-xl shadow-lg">
+        <i class="fas fa-calculator text-white text-3xl"></i>
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800">Billing Generator</h1>
+        <p class="text-gray-600">Generate and manage case billing reports</p>
+      </div>
+    </div>
+    <a href="{% url 'billing_dashboard' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-semibold transition-all">
+      <i class="fas fa-arrow-left mr-2"></i>Back
+    </a>
+  </div>
+
+  <!-- Filters Card -->
+  <form method="get" id="billing-form" class="stat-card mb-6">
+    {% csrf_token %}
+    <div class="space-y-4">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Filter Criteria</h3>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_scope">How do you want to generate the bill?</label>
+          {{ form.scope }}
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_case_type">Case type (optional)</label>
+          {{ form.case_type }}
+          <p class="text-xs text-gray-600 mt-1">Only configured case types will be used</p>
+        </div>
+      </div>
+
+      <!-- Optional Date Range -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_optional_date_from">Optional date from</label>
+          {{ form.optional_date_from }}
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_optional_date_to">Optional date to</label>
+          {{ form.optional_date_to }}
+        </div>
+        <div class="md:col-span-2 text-xs text-gray-600">
+          <i class="fas fa-info-circle mr-1"></i>If provided, results are limited to this date range
+        </div>
+      </div>
+
+      <!-- Dynamic Scope Sections -->
+      <div class="scope-block grid grid-cols-1 md:grid-cols-2 gap-4" data-scope="bank" style="display:none">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_bank">Bank</label>
+          {{ form.bank }}
+        </div>
+      </div>
+
+      <div class="scope-block grid grid-cols-1 md:grid-cols-2 gap-4" data-scope="branch" style="display:none">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_branch">Branch</label>
+          {{ form.branch }}
+        </div>
+      </div>
+
+      <div class="scope-block grid grid-cols-1 md:grid-cols-2 gap-4" data-scope="date" style="display:none">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_date_from">Date from</label>
+          {{ form.date_from }}
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_date_to">Date to</label>
+          {{ form.date_to }}
+        </div>
+      </div>
+
+      <div class="scope-block grid grid-cols-1 md:grid-cols-2 gap-4" data-scope="month" style="display:none">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_month">Month</label>
+          {{ form.month }}
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_year">Year</label>
+          {{ form.year }}
+        </div>
+      </div>
+
+      <div class="scope-block grid grid-cols-1 md:grid-cols-2 gap-4" data-scope="day" style="display:none">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_date_from">Date</label>
+          {{ form.date_from }}
+        </div>
+      </div>
+
+      <div class="scope-block grid grid-cols-1 md:grid-cols-2 gap-4" data-scope="financial_year" style="display:none">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2" for="id_year">Financial year start (e.g., 2025 for FY 25-26)</label>
+          {{ form.year }}
+        </div>
+      </div>
+
+      <!-- Custom Selection -->
+      <div class="scope-block" data-scope="custom" style="display:none">
+        <label class="block text-sm font-bold text-gray-700 mb-2">Pick cases</label>
+        <div class="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
+          <div class="flex gap-2 mb-3">
+            <input type="text" id="case-search" placeholder="Search case no / LRN / applicant" class="flex-1 border-2 border-gray-300 rounded-lg px-3 py-2 focus:border-cyan-500 focus:outline-none" autocomplete="off"/>
+            <button id="case-search-btn" type="button" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg font-semibold">
+              <i class="fas fa-search mr-1"></i>Search
+            </button>
+          </div>
+          <div id="case-search-results" class="max-h-48 overflow-auto text-sm space-y-1 mb-3"></div>
+          <div>
+            <div class="text-xs font-bold text-gray-700 mb-2">Selected cases:</div>
+            <div id="selected-cases" class="flex flex-wrap gap-2 min-h-[2rem]"></div>
+          </div>
+          <div id="cases-hidden-inputs" class="hidden"></div>
+        </div>
+        <p class="text-xs text-gray-600 mt-2">
+          <i class="fas fa-info-circle mr-1"></i>Search and select multiple cases for billing
+        </p>
+      </div>
+
+      <div class="flex gap-3 pt-4 border-t">
+        <button class="bg-gradient-to-r from-cyan-500 to-teal-600 hover:from-cyan-600 hover:to-teal-700 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg">
+          <i class="fas fa-check-circle mr-2"></i>Apply Filters
+        </button>
+        <a href="{% url 'billing_dashboard' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-3 rounded-lg font-bold transition-all">
+          <i class="fas fa-times mr-2"></i>Cancel
+        </a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Results Section -->
+  <div class="stat-card">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-xl font-bold text-gray-800">Billing Results</h3>
+        <p class="text-sm text-gray-600">{{ summary.total_cases }} cases found</p>
+      </div>
+      {% if results %}
+      <div class="flex gap-2">
+        <a href="{{ request.get_full_path }}{% if '?' in request.get_full_path %}&{% else %}?{% endif %}format=csv" class="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg font-semibold transition-all shadow-lg">
+          <i class="fas fa-file-excel mr-2"></i>Export CSV
+        </a>
+        <a href="{{ request.get_full_path }}{% if '?' in request.get_full_path %}&{% else %}?{% endif %}format=print" class="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg font-semibold transition-all shadow-lg">
+          <i class="fas fa-print mr-2"></i>Print View
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="space-y-4">
+      {% for r in results %}
+        <div class="border-2 border-gray-200 rounded-lg p-4 hover:border-cyan-300 transition-all">
+          <!-- Collapsed header with total and actions -->
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-bold text-gray-800">{{ r.case.case_number }}</span>
+                {% if r.is_quotation %}
+                  <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">Quotation</span>
+                {% endif %}
+              </div>
+              <div class="text-sm text-gray-600">{{ r.case.applicant_name }}</div>
+              <div class="text-xs text-gray-500">LRN: {{ r.case.legal_reference_number|default:'--' }} • {{ r.case.bank.name }}</div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <div class="text-[11px] text-gray-500 leading-tight">Grand Total</div>
+                <div class="text-xl font-bold text-cyan-700">₹{{ r.total|floatformat:2 }}</div>
+              </div>
+              <button type="button" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded-lg text-sm font-semibold transition-all" data-action="toggle-details" data-case="{{ r.case.id }}">
+                <i class="fas fa-eye mr-1"></i>Show Details
+              </button>
+              <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-semibold transition-all" data-action="toggle-editor" data-case="{{ r.case.id }}">
+                <i class="fas fa-edit mr-1"></i>Edit Fees
+              </button>
+            </div>
+          </div>
+
+          <!-- Details block (hidden by default) -->
+          <div class="overflow-x-auto mt-3" data-details-for="{{ r.case.id }}" style="display:none">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gradient-to-r from-blue-50 to-cyan-50 border-b-2 border-cyan-200">
+                  <th class="px-3 py-2 text-left font-bold text-gray-700">Case Type</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-700">Fee</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for w in r.works %}
+                <tr class="border-b border-gray-100">
+                  <td class="px-3 py-2">{{ w.name }}</td>
+                  <td class="px-3 py-2 text-right font-semibold">₹{{ w.amount|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                
+                <!-- Editor Rows -->
+                <!-- Editor Rows -->
+                <tr class="bg-yellow-50 border-b border-yellow-200" data-editor-for="{{ r.case.id }}" style="display:none{% if r.is_quotation %};display:none{% endif %}">
+                  <td class="px-3 py-2 text-right text-xs font-semibold text-gray-600">Override original fee</td>
+                  <td class="px-3 py-2">
+                    <div class="flex items-center gap-2">
+                      <input type="number" step="0.01" class="border-2 border-gray-300 rounded px-2 py-1 w-32 text-sm focus:border-cyan-500 focus:outline-none" value="{{ r.case.original_custom_fee|default_if_none:'' }}" data-role="orig-fee" data-case="{{ r.case.id }}"/>
+                      <button class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded text-xs font-semibold" data-action="save-orig" data-case="{{ r.case.id }}">Save</button>
+                      <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded text-xs font-semibold" data-action="clear-orig" data-case="{{ r.case.id }}">Clear</button>
+                    </div>
+                  </td>
+                </tr>
+                {% for wi in r.work_items %}
+                <tr class="bg-yellow-50 border-b border-yellow-200" data-editor-for="{{ r.case.id }}" style="display:none">
+                  <td class="px-3 py-2 text-right text-xs font-semibold text-gray-600">Override "{{ wi.name }}"</td>
+                  <td class="px-3 py-2">
+                    <div class="flex items-center gap-2">
+                      <input type="number" step="0.01" class="border-2 border-gray-300 rounded px-2 py-1 w-32 text-sm focus:border-cyan-500 focus:outline-none" value="{{ wi.custom|default_if_none:'' }}" data-role="work-fee" data-work="{{ wi.id }}" data-case="{{ r.case.id }}"/>
+                      <button class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1 rounded text-xs font-semibold" data-action="save-work" data-work="{{ wi.id }}" data-case="{{ r.case.id }}">Save</button>
+                      <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded text-xs font-semibold" data-action="clear-work" data-work="{{ wi.id }}" data-case="{{ r.case.id }}">Clear</button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+                <tr class="bg-green-50 border-b border-green-200" data-editor-for="{{ r.case.id }}" style="display:none{% if r.is_quotation %};display:none{% endif %}">
+                  <td class="px-3 py-2 text-right text-xs font-semibold text-gray-600">Add ad-hoc line</td>
+                  <td class="px-3 py-2">
+                    <div class="space-y-2">
+                      <div class="flex items-center gap-2">
+                        <input type="text" placeholder="Name" class="border-2 border-gray-300 rounded px-2 py-1 flex-1 text-sm focus:border-cyan-500 focus:outline-none" data-role="adhoc-name" data-case="{{ r.case.id }}"/>
+                        <input type="number" step="0.01" placeholder="Amount" class="border-2 border-gray-300 rounded px-2 py-1 w-32 text-sm focus:border-cyan-500 focus:outline-none" data-role="adhoc-amount" data-case="{{ r.case.id }}"/>
+                        <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-semibold" data-action="add-adhoc" data-case="{{ r.case.id }}">Add</button>
+                      </div>
+                      {% if r.adhoc_items %}
+                      <div class="flex flex-wrap gap-2">
+                        {% for a in r.adhoc_items %}
+                        <span class="inline-flex items-center gap-2 bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold" data-adhoc="{{ a.id }}">
+                          {{ a.name }}: ₹{{ a.amount|floatformat:2 }}
+                          <button class="text-red-600 hover:text-red-700 font-bold" title="Delete" data-action="del-adhoc" data-adhoc="{{ a.id }}" data-case="{{ r.case.id }}">×</button>
+                        </span>
+                        {% endfor %}
+                      </div>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-gray-50">
+                <tr class="border-t-2 border-gray-300">
+                  <td class="px-3 py-2 text-right font-semibold text-gray-700">Works Total</td>
+                  <td class="px-3 py-2 text-right font-bold text-blue-700">₹{{ r.works_total|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                  <td class="px-3 py-2 text-right font-semibold text-gray-700">Receipt</td>
+                  <td class="px-3 py-2 text-right font-bold text-blue-700">₹{{ r.receipt|floatformat:2 }}</td>
+                </tr>
+                <tr class="bg-gradient-to-r from-blue-50 to-cyan-50 border-t-2 border-cyan-300">
+                  <td class="px-3 py-2 text-right font-bold text-gray-800">Grand Total</td>
+                  <td class="px-3 py-2 text-right font-bold text-xl text-cyan-700">₹{{ r.total|floatformat:2 }}</td>
+                </tr>
+              </tfoot>
+            </table>
+            <div class="mt-2 p-2 bg-blue-50 rounded text-xs text-blue-700" data-editor-for="{{ r.case.id }}" style="display:none">
+              <i class="fas fa-info-circle mr-1"></i>Use the controls above to override fees or add ad‑hoc lines. Changes update totals after save.
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="text-center py-12">
+          <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+          <p class="text-gray-500">No cases match your filters</p>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Summary Footer -->
+    {% if results %}
+    <div class="mt-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-2 border-cyan-200">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div>
+          <div class="text-xs text-gray-600 mb-1">Total Cases</div>
+          <div class="text-2xl font-bold text-gray-800">{{ summary.total_cases }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-600 mb-1">Receipts</div>
+          <div class="text-2xl font-bold text-blue-700">₹{{ summary.total_receipts|floatformat:2 }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-600 mb-1">Fees (works)</div>
+          <div class="text-2xl font-bold text-blue-700">₹{{ summary.total_fees|floatformat:2 }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-600 mb-1">Grand Total</div>
+          <div class="text-2xl font-bold text-cyan-700">₹{{ summary.grand_total|floatformat:2 }}</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  (function() {
+    function showRelevant() {
+      var scope = document.getElementById('id_scope');
+      if (!scope) return;
+      var selected = scope.value;
+      document.querySelectorAll('.scope-block').forEach(function(el){
+        var s = el.getAttribute('data-scope');
+        el.style.display = (s === selected) ? '' : 'none';
+      });
+    }
+    document.addEventListener('change', function(evt){
+      if (evt.target && evt.target.id === 'id_scope') {
+        showRelevant();
+      }
+    });
+    showRelevant();
+
+    // Custom selection search
+    var searchBox = document.getElementById('case-search');
+    var searchBtn = document.getElementById('case-search-btn');
+    var resultsEl = document.getElementById('case-search-results');
+    var selectedEl = document.getElementById('selected-cases');
+    var hiddenEl = document.getElementById('cases-hidden-inputs');
+    var originalSelect = document.getElementById('id_cases');
+    var selectedMap = {};
+
+    function addSelected(id, label) {
+      if (selectedMap[id]) return;
+      selectedMap[id] = label;
+      var chip = document.createElement('span');
+      chip.className = 'inline-flex items-center gap-1 bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full text-sm font-semibold';
+      chip.setAttribute('data-id', id);
+      chip.innerHTML = label + ' <button type="button" class="remove-chip ml-1 hover:text-cyan-900">×</button>';
+      selectedEl.appendChild(chip);
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'cases';
+      input.value = id;
+      input.setAttribute('data-id', id);
+      hiddenEl.appendChild(input);
+    }
+
+    function removeSelected(id) {
+      delete selectedMap[id];
+      var chip = selectedEl.querySelector('[data-id="'+id+'"]');
+      if (chip) chip.remove();
+      var inp = hiddenEl.querySelector('input[data-id="'+id+'"]');
+      if (inp) inp.remove();
+      if (originalSelect) {
+        var opt = Array.from(originalSelect.options).find(o => o.value == id);
+        if (opt) opt.selected = false;
+      }
+    }
+
+    if (originalSelect) {
+      Array.from(originalSelect.options).forEach(function(opt){
+        if (opt.selected) addSelected(opt.value, opt.textContent.trim());
+      });
+      originalSelect.closest('.scope-block')?.classList.add('hidden');
+    }
+
+    function renderResults(items) {
+      resultsEl.innerHTML = '';
+      if (items.length === 0) {
+        resultsEl.innerHTML = '<div class="text-sm text-gray-500 p-2">No cases found</div>';
+        return;
+      }
+      items.forEach(function(it){
+        var row = document.createElement('label');
+        row.className = 'flex items-center gap-2 p-2 rounded hover:bg-blue-50 cursor-pointer';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'w-4 h-4';
+        cb.value = it.id;
+        cb.checked = !!selectedMap[it.id];
+        cb.addEventListener('change', function(){
+          if (cb.checked) {
+            addSelected(it.id, it.label);
+          } else {
+            removeSelected(it.id);
+          }
+        });
+        var span = document.createElement('span');
+        span.className = 'text-sm';
+        span.textContent = it.label;
+        row.appendChild(cb);
+        row.appendChild(span);
+        resultsEl.appendChild(row);
+      });
+    }
+
+    function doSearch() {
+      var q = (searchBox && searchBox.value) || '';
+      var params = new URLSearchParams();
+      if (q) params.append('q', q);
+      var bankSel = document.getElementById('id_bank');
+      var branchSel = document.getElementById('id_branch');
+      if (bankSel && bankSel.value) params.append('bank', bankSel.value);
+      if (branchSel && branchSel.value) params.append('branch', branchSel.value);
+      resultsEl.innerHTML = '<div class="text-sm text-gray-500 p-2"><i class="fas fa-spinner fa-spin mr-2"></i>Searching...</div>';
+      fetch('{% url "billing_case_search_api" %}?'+params.toString(), {headers: {"X-Requested-With":"XMLHttpRequest"}})
+        .then(r => r.json())
+        .then(data => renderResults(data.results || []))
+        .catch(() => { resultsEl.innerHTML = '<div class="text-sm text-red-600 p-2">Search failed</div>'; });
+    }
+
+    if (searchBtn) searchBtn.addEventListener('click', doSearch);
+    if (searchBox) searchBox.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); doSearch(); } });
+    document.addEventListener('change', function(evt){ if (evt.target && evt.target.id === 'id_scope' && evt.target.value === 'custom') { doSearch(); } });
+    selectedEl.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-chip')) {
+        var chip = e.target.closest('[data-id]');
+        if (chip) removeSelected(chip.getAttribute('data-id'));
+      }
+    });
+
+    // Fee editor tools
+    function getCSRF() {
+      const name = 'csrftoken=';
+      const arr = document.cookie ? document.cookie.split(';') : [];
+      for (let c of arr) {
+        c = c.trim();
+        if (c.startsWith(name)) return decodeURIComponent(c.substring(name.length));
+      }
+      const inp = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      return inp ? inp.value : '';
+    }
+
+    async function postUpdate(payload) {
+      const res = await fetch('{% url "billing_update_fees_api" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRF(),
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(payload)
+      });
+      return res.json();
+    }
+
+    document.addEventListener('click', async function(evt){
+      const el = evt.target.closest('[data-action]');
+      if (!el) return;
+      const action = el.getAttribute('data-action');
+      const caseId = el.getAttribute('data-case');
+
+      if (action === 'toggle-details') {
+        evt.preventDefault();
+        const box = document.querySelector('[data-details-for="'+caseId+'"]');
+        if (!box) return;
+        const showing = box.style.display !== 'none';
+        box.style.display = showing ? 'none' : '';
+        el.innerHTML = showing ? '<i class="fas fa-eye mr-1"></i>Show Details' : '<i class="fas fa-eye-slash mr-1"></i>Hide Details';
+        return;
+      }
+
+      if (action === 'toggle-editor') {
+        evt.preventDefault();
+        // Ensure details are visible when editing
+        const detailsBox = document.querySelector('[data-details-for="'+caseId+'"]');
+        if (detailsBox && detailsBox.style.display === 'none') {
+          detailsBox.style.display = '';
+          const detBtn = document.querySelector('[data-action="toggle-details"][data-case="'+caseId+'"]');
+          if (detBtn) detBtn.innerHTML = '<i class="fas fa-eye-slash mr-1"></i>Hide Details';
+        }
+        const rows = document.querySelectorAll('[data-editor-for="'+caseId+'"]');
+        let anyVisible = false;
+        rows.forEach(r => { if (r.style.display !== 'none') anyVisible = true; });
+        const nextState = anyVisible ? 'none' : '';
+        rows.forEach(r => r.style.display = nextState);
+        el.innerHTML = nextState === '' ? '<i class="fas fa-times mr-1"></i>Hide' : '<i class="fas fa-edit mr-1"></i>Edit Fees';
+        return;
+      }
+
+      if (!caseId) return;
+      evt.preventDefault();
+
+      try {
+        if (action === 'save-orig' || action === 'clear-orig') {
+          const inp = document.querySelector('input[data-role="orig-fee"][data-case="'+caseId+'"]');
+          const val = (action === 'clear-orig') ? '' : (inp ? inp.value : '');
+          const resp = await postUpdate({ case_id: parseInt(caseId), original_custom_fee: val });
+          if (resp && resp.ok) { location.reload(); }
+        } else if (action === 'save-work' || action === 'clear-work') {
+          const wid = el.getAttribute('data-work');
+          const inp = document.querySelector('input[data-role="work-fee"][data-work="'+wid+'"][data-case="'+caseId+'"]');
+          const val = (action === 'clear-work') ? '' : (inp ? inp.value : '');
+          const resp = await postUpdate({ case_id: parseInt(caseId), works: [{ id: parseInt(wid), custom_fee: val }] });
+          if (resp && resp.ok) { location.reload(); }
+        } else if (action === 'add-adhoc') {
+          const n = document.querySelector('input[data-role="adhoc-name"][data-case="'+caseId+'"]');
+          const a = document.querySelector('input[data-role="adhoc-amount"][data-case="'+caseId+'"]');
+          const name = n ? n.value : '';
+          const amount = a ? a.value : '';
+          if (!name || !amount) { alert('Please provide both name and amount'); return; }
+          const resp = await postUpdate({ case_id: parseInt(caseId), adhoc: [{ name, amount }] });
+          if (resp && resp.ok) { location.reload(); }
+        } else if (action === 'del-adhoc') {
+          const aid = el.getAttribute('data-adhoc');
+          if (!aid) return;
+          if (!confirm('Delete this ad-hoc line?')) return;
+          const resp = await postUpdate({ case_id: parseInt(caseId), adhoc: [{ id: parseInt(aid), _delete: true }] });
+          if (resp && resp.ok) { location.reload(); }
+        }
+      } catch (e) {
+        alert('Update failed: ' + e.message);
+      }
+    });
+  })();
+</script>
+{% endblock %}

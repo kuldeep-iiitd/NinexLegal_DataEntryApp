@@ -1,0 +1,53 @@
+{% extends 'cases/base.html' %}
+{% block title %}Upload Documents for Parent and Subcases{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow">
+  <h2 class="text-2xl font-bold mb-2">Upload Documents (Group)</h2>
+  <p class="text-sm text-gray-600 mb-4">Please upload a document for the parent case and each subcase. All uploads are mandatory.</p>
+
+  <div class="bg-gray-50 border rounded p-3 mb-4">
+    <div class="text-sm text-gray-700"><span class="font-semibold">Parent Case:</span> {{ parent.case_number }}</div>
+    <div class="text-sm text-gray-700"><span class="font-semibold">Status:</span> {{ parent.get_status_display }}</div>
+    <div class="text-sm text-gray-700"><span class="font-semibold">LRN:</span> <span class="font-mono">{{ parent.legal_reference_number }}</span></div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="space-y-6">
+    {% csrf_token %}
+
+    <div class="border rounded p-4">
+      <h3 class="font-semibold mb-2">Parent Case Document</h3>
+      <input type="file" name="doc_{{ parent.id }}" class="w-full border rounded p-2" accept=".pdf,image/*" required />
+      {% if errors.parent %}<div class="text-red-600 text-sm mt-1">{{ errors.parent }}</div>{% endif %}
+      <input type="text" name="desc_{{ parent.id }}" class="w-full border rounded p-2 mt-2" placeholder="Optional description" />
+    </div>
+
+    {% if children %}
+      <div class="border-t pt-4">
+        <h3 class="font-semibold mb-2">Subcases</h3>
+        <div class="space-y-4">
+          {% for c in children %}
+            <div class="border rounded p-4">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div class="text-sm text-gray-700">
+                  <div><span class="font-semibold">Case:</span> {{ c.case_number }}</div>
+                  <div><span class="font-semibold">Status:</span> {{ c.get_status_display }}</div>
+                  <div><span class="font-semibold">LRN:</span> <span class="font-mono">{{ c.legal_reference_number }}</span></div>
+                </div>
+              </div>
+              <input type="file" name="doc_{{ c.id }}" class="w-full border rounded p-2 mt-2" accept=".pdf,image/*" required />
+              {% if errors.c.id %}<div class="text-red-600 text-sm mt-1">{{ errors.c.id }}</div>{% endif %}
+              <input type="text" name="desc_{{ c.id }}" class="w-full border rounded p-2 mt-2" placeholder="Optional description" />
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <button type="submit" class="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">Upload All</button>
+  </form>
+
+  <div class="mt-4 flex gap-4">
+    <a href="{% url 'case_detail' parent.id %}" class="text-blue-600 underline">Back to Case</a>
+  </div>
+</div>
+{% endblock %}

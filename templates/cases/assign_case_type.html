@@ -18,7 +18,7 @@
         <form method="post" class="flex flex-col gap-4">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit" class="w-full py-3 mt-2 bg-purple-600 hover:bg-purple-700 text-white text-lg font-semibold rounded-lg shadow transition">
+            <button type="submit" class="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition">
                 {% if edit_mode %}Save Changes{% else %}Assign{% endif %}
             </button>
         </form>

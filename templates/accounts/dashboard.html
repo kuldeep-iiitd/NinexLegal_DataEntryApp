@@ -1,169 +1,545 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 py-6">
-  <div class="w-full max-w-6xl mx-auto p-6">
-    <!-- Header -->
-    <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
-      <h2 class="text-3xl font-bold text-center text-gray-800">Welcome, {{ username }}!</h2>
-      <p class="text-center text-gray-600 mt-2">Your Employee ID is: <span class="font-semibold">{{ employee_id }}</span></p>
-      {% if is_admin %}
-      <p class="text-center text-sm text-blue-600 mt-1">🔑 Administrative Access</p>
-      {% endif %}
-    </div>
+{% extends 'accounts/admin_base.html' %}
+{% block title %}Dashboard{% endblock %}
 
-    {% if is_admin or is_admin == None %}
-    <!-- Admin Dashboard Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-      
-      <!-- Case Management Section -->
-      <div class="bg-white rounded-2xl shadow-xl p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-          <span class="text-2xl mr-2">⚖️</span>Case Management
-        </h3>
-        <div class="flex flex-col gap-3">
-          {% if request.user.groups.all.0.name == 'ADMIN' or request.user.groups.all.0.name == 'CO-ADMIN' or request.user.is_superuser %}
-          <a href="{% url 'create_case' %}" class="py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
-            Create New Case
-          </a>
-          {% endif %}
-          <a href="{% url 'view_cases' %}" class="py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
-            View All Cases
-          </a>
-          <a href="{% url 'view_pending_cases' %}" class="py-3 bg-orange-600 hover:bg-orange-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
-            Pending Cases
-          </a>
+{% block stats_bar %}
+{% if is_admin %}
+<div class="border-t border-white/20" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%);">
+  <div class="max-w-full px-6 py-5">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div class="text-center transform hover:scale-105 transition-transform duration-300">
+        <div class="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-white/20 backdrop-blur mb-3 shadow-lg">
+          <i class="fas fa-folder-open text-2xl text-white"></i>
         </div>
-        <p class="text-sm text-gray-600 text-center mt-3">Manage case creation and advocate assignments</p>
+        <div class="text-white/90 text-xs font-bold mb-1 tracking-wide">TOTAL CASES</div>
+        <div class="text-4xl font-extrabold text-white mb-1">{{ total_cases|default:0 }}</div>
+        <div class="text-white/70 text-[10px] uppercase tracking-wider">All time</div>
       </div>
-      
-      <!-- Bank Management Section -->
-      <div class="bg-white rounded-2xl shadow-xl p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-          <span class="text-2xl mr-2">🏦</span>Bank Management
-        </h3>
-        <div class="flex flex-col gap-3">
-          <a href="{% url 'create_bank' %}" class="py-3 bg-blue-700 hover:bg-blue-800 text-white text-lg font-semibold rounded-lg shadow transition text-center">
-            Create Bank
-          </a>
-          <a href="{% url 'view_banks' %}" class="py-3 bg-purple-700 hover:bg-purple-800 text-white text-lg font-semibold rounded-lg shadow transition text-center">
-            View All Banks
-          </a>
+      <div class="text-center transform hover:scale-105 transition-transform duration-300">
+        <div class="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-white/20 backdrop-blur mb-3 shadow-lg">
+          <i class="fas fa-exclamation-circle text-2xl text-white"></i>
         </div>
-        <p class="text-sm text-gray-600 text-center mt-3">Manage banks and their branches</p>
+        <div class="text-white/90 text-xs font-bold mb-1 tracking-wide">PENDING</div>
+        <div class="text-4xl font-extrabold text-white mb-1">{{ pending_cases|default:0 }}</div>
+        <div class="text-white/70 text-[10px] uppercase tracking-wider">Needs action</div>
       </div>
-      
-      <!-- Case Types Section -->
-      <div class="bg-white rounded-2xl shadow-xl p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-          <span class="text-2xl mr-2">📋</span>Case Types
-        </h3>
-        <div class="flex flex-col gap-3">
-          <a href="{% url 'create_case_type' %}" class="py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
-            Create Case Type
-          </a>
-          <a href="{% url 'view_case_types' %}" class="py-3 bg-purple-600 hover:bg-purple-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
-            View All Case Types
-          </a>
+      <div class="text-center transform hover:scale-105 transition-transform duration-300">
+        <div class="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-white/20 backdrop-blur mb-3 shadow-lg">
+          <i class="fas fa-clipboard-check text-2xl text-white"></i>
         </div>
-        <p class="text-sm text-gray-600 text-center mt-3">Define and manage different case categories</p>
+        <div class="text-white/90 text-xs font-bold mb-1 tracking-wide">ASSIGNED</div>
+        <div class="text-4xl font-extrabold text-white mb-1">{{ assigned_cases|default:0 }}</div>
+        <div class="text-white/70 text-[10px] uppercase tracking-wider">Active work</div>
       </div>
-      
-      <!-- Employee Management Section -->
-      <div class="bg-white rounded-2xl shadow-xl p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-          <span class="text-2xl mr-2">👥</span>Employee Management
-        </h3>
-        <div class="flex flex-col gap-3">
-          <a href="{% url 'create_employee' %}" class="py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
-            Create Employee
-          </a>
-          <a href="{% url 'view_employees' %}" class="py-3 bg-teal-600 hover:bg-teal-700 text-white text-lg font-semibold rounded-lg shadow transition text-center">
-            Manage Employees
-          </a>
+      <div class="text-center transform hover:scale-105 transition-transform duration-300">
+        <div class="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-white/20 backdrop-blur mb-3 shadow-lg">
+          <i class="fas fa-user-tie text-2xl text-white"></i>
         </div>
-        <p class="text-sm text-gray-600 text-center mt-3">Manage advocates and other staff members</p>
+        <div class="text-white/90 text-xs font-bold mb-1 tracking-wide">ADVOCATES</div>
+        <div class="text-4xl font-extrabold text-white mb-1">{{ total_advocates|default:0 }}</div>
+        <div class="text-white/70 text-[10px] uppercase tracking-wider">Team size</div>
       </div>
-
-      <!-- Quick Stats Section -->
-      <div class="bg-white rounded-2xl shadow-xl p-6 lg:col-span-2 xl:col-span-1">
-        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-          <span class="text-2xl mr-2">📊</span>Quick Stats
-        </h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-blue-50 p-4 rounded-lg text-center">
-            <div class="text-2xl font-bold text-blue-600">{{ total_cases|default:"0" }}</div>
-            <div class="text-sm text-gray-600">Total Cases</div>
-          </div>
-          <div class="bg-orange-50 p-4 rounded-lg text-center">
-            <div class="text-2xl font-bold text-orange-600">{{ pending_cases|default:"0" }}</div>
-            <div class="text-sm text-gray-600">Pending</div>
-          </div>
-          <div class="bg-green-50 p-4 rounded-lg text-center">
-            <div class="text-2xl font-bold text-green-600">{{ assigned_cases|default:"0" }}</div>
-            <div class="text-sm text-gray-600">Assigned</div>
-          </div>
-          <div class="bg-purple-50 p-4 rounded-lg text-center">
-            <div class="text-2xl font-bold text-purple-600">{{ total_advocates|default:"0" }}</div>
-            <div class="text-sm text-gray-600">Advocates</div>
-          </div>
-        </div>
-        <p class="text-sm text-gray-600 text-center mt-3">System overview and metrics</p>
-      </div>
-
-      <!-- System Navigation Section -->
-      <div class="bg-white rounded-2xl shadow-xl p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-          <span class="text-2xl mr-2">🚀</span>Quick Actions
-        </h3>
-        <div class="flex flex-col gap-3">
-          {% if request.user.groups.all.0.name == 'ADMIN' or request.user.groups.all.0.name == 'CO-ADMIN' or request.user.is_superuser %}
-          <a href="{% url 'create_case' %}" class="py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-lg shadow transition text-center">
-            🆕 New Case
-          </a>
-          {% endif %}
-          <a href="{% url 'view_pending_cases' %}" class="py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-lg shadow transition text-center">
-            ⏰ Assign Cases
-          </a>
-          {% if request.user.groups.all.0.name == 'ADMIN' or request.user.groups.all.0.name == 'CO-ADMIN' or request.user.is_superuser %}
-          <a href="{% url 'create_employee' %}" class="py-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-semibold rounded-lg shadow transition text-center">
-            👤 Add Advocate
-          </a>
-          {% endif %}
-        </div>
-        <p class="text-sm text-gray-600 text-center mt-3">Most frequently used actions</p>
-      </div>
-      
-    </div>
-    {% else %}
-    <!-- Limited Dashboard for Non-Admin Users -->
-    <div class="bg-white rounded-2xl shadow-xl p-6 text-center">
-      <h3 class="text-xl font-bold text-gray-800 mb-4">⚠️ Limited Access</h3>
-      <p class="text-gray-600 mb-4">You don't have administrative privileges. Please contact your administrator to request access to the ADMIN or CO-ADMIN group.</p>
-      <div class="text-sm text-gray-500">
-        <p>Available actions:</p>
-        <ul class="list-disc list-inside mt-2">
-          <li>View this dashboard</li>
-          <li>Change your password</li>
-        </ul>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Logout Section -->
-    <div class="bg-white rounded-2xl shadow-xl p-6 mt-6">
-      <form method="post" action="{% url 'logout' %}" class="text-center">
-        {% csrf_token %}
-        <button type="submit" class="py-3 px-8 bg-gray-200 hover:bg-gray-300 text-gray-800 text-lg font-semibold rounded-lg shadow transition">
-          Logout
-        </button>
-      </form>
     </div>
   </div>
-</body>
-</html>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if is_admin or is_admin == None %}
+<div class="max-w-7xl mx-auto">
+  <!-- Welcome Header with Animation -->
+  <div class="relative overflow-hidden glass-effect rounded-3xl shadow-2xl p-8 mb-8 border border-white/20 group">
+    <!-- Animated Background Pattern -->
+    <div class="absolute inset-0 opacity-5">
+      <div class="absolute top-0 left-0 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+      <div class="absolute top-0 right-0 w-72 h-72 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+      <div class="absolute bottom-0 left-1/2 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+    </div>
+    
+    <div class="relative flex items-center justify-between">
+      <div class="flex items-center">
+        <div class="relative">
+          <div class="absolute inset-0 bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300 animate-pulse"></div>
+          <div class="relative h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 flex items-center justify-center text-white shadow-2xl mr-6 transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+            <span class="text-3xl font-black">{{ username|first|upper }}</span>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-4xl font-black mb-2 animate-gradient" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%); background-size: 200% 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            Welcome back, {{ username }}!
+          </h1>
+          <p class="text-gray-600 text-lg flex items-center">
+            <i class="fas fa-id-badge mr-2 text-blue-600"></i>
+            Employee ID: <span class="font-bold text-blue-700 ml-2 px-3 py-1 rounded-lg bg-blue-100">{{ employee_id }}</span>
+          </p>
+        </div>
+      </div>
+      <div class="hidden lg:flex items-center space-x-4">
+        <div class="text-center">
+          <div class="text-xs text-gray-500 mb-1">Today</div>
+          <div class="text-2xl font-bold text-blue-600">{{ today|date:"d" }}</div>
+          <div class="text-xs text-gray-500">{{ today|date:"M Y" }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes blob {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      25% { transform: translate(20px, -50px) scale(1.1); }
+      50% { transform: translate(-20px, 20px) scale(0.9); }
+      75% { transform: translate(50px, 50px) scale(1.05); }
+    }
+    .animate-blob {
+      animation: blob 10s infinite;
+    }
+    .animation-delay-2000 {
+      animation-delay: 2s;
+    }
+    .animation-delay-4000 {
+      animation-delay: 4s;
+    }
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .animate-gradient {
+      animation: gradient 3s ease infinite;
+    }
+  </style>
+
+  <!-- Time-based Activity Overview with Cards -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-3xl font-black text-gray-800 flex items-center">
+        <div class="h-10 w-2 bg-gradient-to-b from-blue-600 via-cyan-500 to-teal-500 rounded-full mr-4 animate-pulse"></div>
+        <span class="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">Activity Overview</span>
+      </h2>
+      <div class="flex items-center space-x-2">
+        <div class="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
+        <span class="text-sm text-gray-600 font-semibold">Live Data</span>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- Today's New Cases -->
+      <div class="group relative overflow-hidden rounded-2xl p-6 transform hover:scale-105 hover:-rotate-1 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl" style="background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);">
+        <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 group-hover:scale-150 transition-transform duration-500"></div>
+        <div class="relative">
+          <div class="flex items-center justify-between mb-4">
+            <div class="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-white group-hover:rotate-12 transition-transform duration-300">
+              <i class="fas fa-plus-circle text-2xl"></i>
+            </div>
+            <div class="text-white/80 text-xs font-bold uppercase tracking-wider">Today</div>
+          </div>
+          <div class="text-5xl font-black text-white mb-2 group-hover:scale-110 transition-transform duration-300">{{ cases_today }}</div>
+          <div class="text-white/90 text-sm font-semibold">New Cases</div>
+          <div class="text-white/60 text-xs mt-1">{{ today|date:"M d" }}</div>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-white/30 group-hover:h-2 transition-all duration-300"></div>
+      </div>
+
+      <!-- Completed Today -->
+      <div class="group relative overflow-hidden rounded-2xl p-6 transform hover:scale-105 hover:rotate-1 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
+        <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 group-hover:scale-150 transition-transform duration-500"></div>
+        <div class="relative">
+          <div class="flex items-center justify-between mb-4">
+            <div class="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-white group-hover:rotate-12 transition-transform duration-300">
+              <i class="fas fa-check-circle text-2xl"></i>
+            </div>
+            <div class="text-white/80 text-xs font-bold uppercase tracking-wider">Today</div>
+          </div>
+          <div class="text-5xl font-black text-white mb-2 group-hover:scale-110 transition-transform duration-300">{{ completed_today }}</div>
+          <div class="text-white/90 text-sm font-semibold">Completed</div>
+          <div class="text-white/60 text-xs mt-1">{{ today|date:"M d" }}</div>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-white/30 group-hover:h-2 transition-all duration-300"></div>
+      </div>
+
+      <!-- Last 7 Days -->
+      <div class="group relative overflow-hidden rounded-2xl p-6 transform hover:scale-105 hover:-rotate-1 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl" style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);">
+        <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 group-hover:scale-150 transition-transform duration-500"></div>
+        <div class="relative">
+          <div class="flex items-center justify-between mb-4">
+            <div class="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-white group-hover:rotate-12 transition-transform duration-300">
+              <i class="fas fa-calendar-week text-2xl"></i>
+            </div>
+            <div class="text-white/80 text-xs font-bold uppercase tracking-wider">7 Days</div>
+          </div>
+          <div class="text-5xl font-black text-white mb-2 group-hover:scale-110 transition-transform duration-300">{{ completed_7days }}</div>
+          <div class="text-white/90 text-sm font-semibold">Completed</div>
+          <div class="text-white/60 text-xs mt-1">Last week</div>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-white/30 group-hover:h-2 transition-all duration-300"></div>
+      </div>
+
+      <!-- Last 30 Days -->
+      <div class="group relative overflow-hidden rounded-2xl p-6 transform hover:scale-105 hover:rotate-1 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl" style="background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);">
+        <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 group-hover:scale-150 transition-transform duration-500"></div>
+        <div class="relative">
+          <div class="flex items-center justify-between mb-4">
+            <div class="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-white group-hover:rotate-12 transition-transform duration-300">
+              <i class="fas fa-calendar-alt text-2xl"></i>
+            </div>
+            <div class="text-white/80 text-xs font-bold uppercase tracking-wider">30 Days</div>
+          </div>
+          <div class="text-5xl font-black text-white mb-2 group-hover:scale-110 transition-transform duration-300">{{ completed_30days }}</div>
+          <div class="text-white/90 text-sm font-semibold">Completed</div>
+          <div class="text-white/60 text-xs mt-1">Last month</div>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-white/30 group-hover:h-2 transition-all duration-300"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Overview Cards - CLICKABLE with 3D Effects -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-3xl font-black text-gray-800 flex items-center">
+        <div class="h-10 w-2 bg-gradient-to-b from-blue-600 via-cyan-500 to-teal-500 rounded-full mr-4"></div>
+        <span class="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">Case Status Overview</span>
+      </h2>
+      <span class="text-sm font-semibold text-gray-500 italic flex items-center">
+        <i class="fas fa-hand-pointer mr-2 text-blue-500 animate-bounce"></i>
+        Click any card to view cases
+      </span>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+      {% for card in status_cards_active %}
+        <a href="{% url 'cases_by_status' card.key %}" class="group relative block perspective-1000">
+          <div class="relative stat-card text-center transform hover:scale-110 hover:-translate-y-2 transition-all duration-500 cursor-pointer overflow-hidden hover:shadow-2xl preserve-3d">
+            <!-- Animated background -->
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-400 to-cyan-500 opacity-0 group-hover:opacity-10 transition-opacity duration-500"></div>
+            
+            <!-- Shine effect -->
+            <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+              <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            </div>
+            
+            <div class="relative z-10">
+              <div class="text-xs font-black text-gray-500 mb-3 uppercase tracking-widest group-hover:text-blue-600 transition-colors duration-300">{{ card.label }}</div>
+              <div class="relative inline-block">
+                <div class="text-5xl font-black bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-500 bg-clip-text text-transparent mb-2 group-hover:scale-125 transition-transform duration-300">
+                  {{ card.count }}
+                </div>
+                <!-- Animated ring -->
+                <div class="absolute inset-0 border-4 border-blue-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:scale-150 transition-all duration-500"></div>
+              </div>
+              <div class="h-1 w-16 mx-auto rounded-full bg-gradient-to-r from-blue-400 via-cyan-400 to-red-400 opacity-0 group-hover:opacity-100 group-hover:w-24 transition-all duration-300"></div>
+              <div class="text-[11px] text-blue-600 font-bold mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <i class="fas fa-arrow-right mr-1 animate-pulse"></i>
+                View All
+              </div>
+            </div>
+            
+            <!-- Corner decoration -->
+            <div class="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-blue-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-blue-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          </div>
+        </a>
+      {% endfor %}
+      {% for card in status_cards_completed %}
+        <a href="{% url 'cases_by_status' card.key %}" class="group relative block perspective-1000">
+          <div class="relative stat-card text-center transform hover:scale-110 hover:-translate-y-2 transition-all duration-500 cursor-pointer overflow-hidden hover:shadow-2xl preserve-3d">
+            <!-- Animated background -->
+            <div class="absolute inset-0 bg-gradient-to-br from-green-400 to-emerald-500 opacity-0 group-hover:opacity-10 transition-opacity duration-500"></div>
+            
+            <!-- Shine effect -->
+            <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+              <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            </div>
+            
+            <div class="relative z-10">
+              <div class="text-xs font-black text-gray-500 mb-3 uppercase tracking-widest group-hover:text-green-600 transition-colors duration-300">{{ card.label }}</div>
+              <div class="relative inline-block">
+                <div class="text-5xl font-black bg-gradient-to-br from-green-600 via-emerald-600 to-teal-500 bg-clip-text text-transparent mb-2 group-hover:scale-125 transition-transform duration-300">
+                  {{ card.count }}
+                </div>
+                <!-- Animated ring -->
+                <div class="absolute inset-0 border-4 border-green-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:scale-150 transition-all duration-500"></div>
+              </div>
+              <div class="h-1 w-16 mx-auto rounded-full bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 opacity-0 group-hover:opacity-100 group-hover:w-24 transition-all duration-300"></div>
+              <div class="text-[11px] text-green-600 font-bold mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <i class="fas fa-arrow-right mr-1 animate-pulse"></i>
+                View All
+              </div>
+            </div>
+            
+            <!-- Corner decoration -->
+            <div class="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-green-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-green-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <style>
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+    .preserve-3d {
+      transform-style: preserve-3d;
+    }
+  </style>
+
+  <!-- Advocate Performance - CLICKABLE with Enhanced Design -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-3xl font-black text-gray-800 flex items-center">
+        <div class="h-10 w-2 bg-gradient-to-b from-blue-600 via-indigo-500 to-blue-600 rounded-full mr-4"></div>
+        <span class="bg-gradient-to-r from-blue-600 to-blue-600 bg-clip-text text-transparent">Advocate Performance</span>
+      </h2>
+      <div class="text-right">
+        <div class="text-sm font-bold text-gray-600">{{ today|date:"F d, Y" }}</div>
+        <div class="text-xs text-gray-500">Real-time tracking</div>
+      </div>
+    </div>
+    <div class="stat-card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead>
+            <tr class="border-b-2 border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50">
+              <th class="text-left p-4 font-bold text-gray-700">
+                <div class="flex items-center">
+                  <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white mr-3 shadow-lg">
+                    <i class="fas fa-user text-sm"></i>
+                  </div>
+                  <div>
+                    <div class="text-sm font-black">Advocate</div>
+                    <div class="text-xs text-gray-500 font-normal">Performance metrics</div>
+                  </div>
+                </div>
+              </th>
+              <th class="text-center p-4">
+                <div class="inline-flex flex-col items-center">
+                  <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white mb-1 shadow-lg">
+                    <i class="fas fa-clipboard-list text-sm"></i>
+                  </div>
+                  <div class="text-xs font-black text-gray-700">Assigned</div>
+                </div>
+              </th>
+              <th class="text-center p-4">
+                <div class="inline-flex flex-col items-center">
+                  <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white mb-1 shadow-lg">
+                    <i class="fas fa-clock text-sm"></i>
+                  </div>
+                  <div class="text-xs font-black text-gray-700">Pending</div>
+                </div>
+              </th>
+              <th class="text-center p-4">
+                <div class="text-xs font-black text-gray-700">Today</div>
+                <div class="text-[10px] text-gray-500">Completed</div>
+              </th>
+              <th class="text-center p-4">
+                <div class="text-xs font-black text-gray-700">Yesterday</div>
+                <div class="text-[10px] text-gray-500">Completed</div>
+              </th>
+              <th class="text-center p-4">
+                <div class="text-xs font-black text-gray-700">7 Days</div>
+                <div class="text-[10px] text-gray-500">Completed</div>
+              </th>
+              <th class="text-center p-4">
+                <div class="text-xs font-black text-gray-700">30 Days</div>
+                <div class="text-[10px] text-gray-500">Completed</div>
+              </th>
+              <th class="text-center p-4 font-bold text-gray-700">
+                <i class="fas fa-bolt mr-1 text-blue-500"></i>
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for adv in advocate_stats %}
+            <tr class="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:via-cyan-50 hover:to-blue-50 transition-all duration-300 group">
+              <td class="p-4">
+                <div class="flex items-center">
+                  <div class="relative">
+                    <div class="absolute inset-0 bg-gradient-to-br from-blue-400 via-cyan-400 to-red-400 rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                    <div class="relative h-14 w-14 rounded-xl bg-gradient-to-br from-blue-400 via-cyan-400 to-red-400 flex items-center justify-center text-white font-black text-xl mr-4 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                      {{ adv.advocate.name|first|upper }}
+                    </div>
+                  </div>
+                  <div>
+                    <span class="font-bold text-gray-800 block group-hover:text-blue-700 transition-colors">{{ adv.advocate.name }}</span>
+                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ adv.advocate.employee_id }}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="p-4 text-center">
+                <div class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-blue-100 to-cyan-100 group-hover:from-blue-200 group-hover:to-cyan-200 transition-colors">
+                  <span class="text-blue-700 font-bold text-lg">{{ adv.total_assigned }}</span>
+                </div>
+              </td>
+              <td class="p-4 text-center">
+                <div class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-orange-100 to-amber-100 group-hover:from-orange-200 group-hover:to-amber-200 transition-colors">
+                  <span class="text-orange-700 font-bold text-lg">{{ adv.pending_count }}</span>
+                </div>
+              </td>
+              <td class="p-4 text-center">
+                <div class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-green-100 to-emerald-100 group-hover:from-green-200 group-hover:to-emerald-200 transition-colors">
+                  <span class="text-green-700 font-bold text-lg">{{ adv.completed_today }}</span>
+                </div>
+              </td>
+              <td class="p-4 text-center">
+                <span class="text-gray-700 font-semibold text-lg">{{ adv.completed_yesterday }}</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="text-gray-700 font-semibold text-lg">{{ adv.completed_7days }}</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="text-gray-700 font-semibold text-lg">{{ adv.completed_30days }}</span>
+              </td>
+              <td class="p-4 text-center">
+                <a href="{% url 'cases_by_advocate' adv.advocate.id %}" class="inline-flex items-center px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white text-sm font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 group-hover:animate-pulse">
+                  <i class="fas fa-eye mr-2"></i>View All
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td class="p-12 text-center text-gray-400" colspan="8">
+                <div class="flex flex-col items-center">
+                  <i class="fas fa-user-slash text-6xl mb-4 opacity-20"></i>
+                  <div class="text-lg font-semibold">No advocates found</div>
+                  <div class="text-sm text-gray-500">Add advocates to track performance</div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bank Analytics - CLICKABLE -->
+  <div class="mb-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+      <div class="h-8 w-1 bg-gradient-to-b from-indigo-600 to-blue-600 rounded-full mr-3"></div>
+      Bank Analytics
+    </h2>
+    <div class="stat-card">
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead>
+            <tr class="border-b-2 border-indigo-200">
+              <th class="text-left p-4 font-bold text-gray-700">Bank Name</th>
+              <th class="text-center p-4 font-bold text-gray-700">Total Cases</th>
+              <th class="text-center p-4 font-bold text-gray-700">Active</th>
+              <th class="text-center p-4 font-bold text-gray-700">Completed</th>
+              <th class="text-center p-4 font-bold text-gray-700">Positive</th>
+              <th class="text-center p-4 font-bold text-gray-700">Negative</th>
+              <th class="text-center p-4 font-bold text-gray-700">PSS</th>
+              <th class="text-center p-4 font-bold text-gray-700">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in bank_stats %}
+            <tr class="border-b border-gray-100 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-blue-50 transition-all duration-200 group">
+              <td class="p-4">
+                <div class="font-bold text-gray-800">{{ b.bank.name }}</div>
+                <div class="text-xs text-gray-500">{{ b.bank.state }}</div>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-lg bg-indigo-100 text-indigo-700 font-bold">{{ b.total_cases }}</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-lg bg-orange-100 text-orange-700 font-bold">{{ b.active_cases }}</span>
+              </td>
+              <td class="p-4 text-center">
+                <span class="px-3 py-1 rounded-lg bg-green-100 text-green-700 font-bold">{{ b.completed_cases }}</span>
+              </td>
+              <td class="p-4 text-center text-gray-600 font-semibold">{{ b.positive_cases }}</td>
+              <td class="p-4 text-center text-gray-600 font-semibold">{{ b.negative_cases }}</td>
+              <td class="p-4 text-center text-gray-600 font-semibold">{{ b.pss_cases }}</td>
+              <td class="p-4 text-center">
+                <a href="{% url 'cases_by_bank' b.bank.id %}" class="inline-flex items-center px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors">
+                  <i class="fas fa-eye mr-1"></i>View Cases
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td class="p-12 text-center text-gray-400" colspan="8">
+                <i class="fas fa-chart-bar text-6xl mb-4 opacity-30"></i>
+                <div class="text-lg">No bank data available</div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="stat-card">
+      <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+        <i class="fas fa-check-circle text-green-600 mr-2"></i>
+        Recent Completed Cases
+      </h3>
+      <div class="space-y-2">
+        {% for case in recent_completed %}
+        <div class="p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <div class="font-semibold text-gray-800 text-sm">{{ case.case_number }}</div>
+              <div class="text-xs text-gray-500">{{ case.applicant_name }}</div>
+            </div>
+            <div class="text-right">
+              <span class="text-xs px-2 py-1 rounded {% if case.status == 'positive' %}bg-green-100 text-green-700{% elif case.status == 'negative' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                {{ case.get_status_display }}
+              </span>
+              <div class="text-[10px] text-gray-400 mt-1">{{ case.updated_at|date:"M d, g:i A" }}</div>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-gray-400 py-4">No recent completions</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+        <i class="fas fa-tasks text-blue-600 mr-2"></i>
+        Recent Assignments
+      </h3>
+      <div class="space-y-2">
+        {% for case in recent_assigned %}
+        <div class="p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <div class="font-semibold text-gray-800 text-sm">{{ case.case_number }}</div>
+              <div class="text-xs text-gray-500">{{ case.assigned_advocate.name }}</div>
+            </div>
+            <div class="text-right">
+              <span class="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">
+                {{ case.get_status_display }}
+              </span>
+              <div class="text-[10px] text-gray-400 mt-1">{{ case.updated_at|date:"M d, g:i A" }}</div>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-gray-400 py-4">No recent assignments</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="max-w-3xl mx-auto">
+  <div class="glass-effect rounded-2xl shadow-xl p-8 text-center">
+    <div class="h-20 w-20 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white mx-auto mb-4 shadow-lg">
+      <i class="fas fa-exclamation-triangle text-3xl"></i>
+    </div>
+    <h3 class="text-2xl font-bold mb-3 text-gray-800">Limited Access</h3>
+    <p class="text-gray-600 mb-6">You don't have administrative privileges. Contact your administrator to request access to the ADMIN or CO-ADMIN group.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

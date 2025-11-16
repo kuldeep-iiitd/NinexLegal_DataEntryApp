@@ -1,0 +1,71 @@
+{% extends 'cases/base.html' %}
+{% block title %}Upload Final Document & Set Status{% endblock %}
+{% block content %}
+<div class="min-h-screen py-8" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white/10 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-white/20">
+      <div class="bg-white/20 backdrop-blur px-6 py-4 border-b border-white/20">
+        <h1 class="text-xl font-bold text-white">Finalize Case {{ case.case_number }}</h1>
+      </div>
+      <div class="p-6 space-y-4">
+        <p class="text-sm text-white/80">Upload the final document and choose the final status.</p>
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+          {% csrf_token %}
+          <div>
+            <label class="block text-sm font-medium text-white">Final Document (PDF/Image)</label>
+            {{ form.supporting_document }}
+            {% if form.supporting_document.errors %}
+              <p class="text-red-600 text-sm">{{ form.supporting_document.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white">Description (optional)</label>
+            {{ form.document_description }}
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white">Final Status</label>
+            {{ form.status }}
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-white">Remark (optional)</label>
+            {{ form.remark }}
+          </div>
+          {% if children %}
+          <div class="mt-6">
+            <h2 class="text-sm font-bold text-white">Linked Property Cases — Upload Final Documents (optional)</h2>
+            <p class="text-xs text-white/70 mb-3">You can upload final documents for each linked property now. If you skip a child, it will remain pending until its document is uploaded.</p>
+            <div class="space-y-4">
+              {% for c in children %}
+                <div class="border border-white/20 rounded-lg p-3 bg-white/10 backdrop-blur">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <p class="text-sm font-semibold text-white">{{ c.case_number }}{% if c.legal_reference_number %} <span class="text-xs text-purple-300">({{ c.legal_reference_number }})</span>{% endif %}</p>
+                      <p class="text-[11px] text-white/70">{{ c.property_address|default:'No address' }}</p>
+                    </div>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium {% if c.status == 'sro_document_pending' %}bg-cyan-500/30 text-cyan-200{% elif c.status == 'document_pending' %}bg-blue-500/30 text-blue-200{% else %}bg-gray-500/30 text-gray-200{% endif %}">{{ c.get_status_display }}</span>
+                  </div>
+                  <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="md:col-span-2">
+                      <label class="block text-xs font-medium text-white">Final Document (PDF/Image)</label>
+                      <input type="file" name="child_doc_{{ c.id }}" accept=".pdf,image/*" class="mt-1 block w-full text-xs text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-white">Description</label>
+                      <input type="text" name="child_desc_{{ c.id }}" class="mt-1 block w-full border border-white/30 rounded px-2 py-1 text-xs bg-white/10 backdrop-blur text-white placeholder-white/50" placeholder="Optional" />
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition">Save</button>
+        </form>
+        <div class="pt-2">
+          <a href="{% url 'case_detail' case.id %}" class="text-white underline text-sm hover:text-white/80">Back to case</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

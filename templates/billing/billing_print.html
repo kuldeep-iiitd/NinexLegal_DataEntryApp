@@ -1,0 +1,67 @@
+{% extends 'cases/base.html' %}
+{% block title %}Billing (Print){% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto p-6">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold">Billing (Print)</h1>
+    <a href="{{ request.get_full_path|cut:'&format=print'|cut:'?format=print' }}" class="text-indigo-600">Back</a>
+  </div>
+  <div class="bg-white rounded shadow overflow-hidden">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="text-left p-2">S.No</th>
+          <th class="text-left p-2">Case No</th>
+          <th class="text-left p-2">Applicant</th>
+          <th class="text-left p-2">Bank</th>
+          <th class="text-left p-2">Original Case Type</th>
+          <th class="text-left p-2">LRN</th>
+          {% for i in ""|center:max_works %}
+            <th class="text-left p-2">Work {{ forloop.counter }} Type</th>
+            <th class="text-right p-2">Work {{ forloop.counter }} Fee</th>
+          {% endfor %}
+          <th class="text-right p-2">Works Total</th>
+          <th class="text-right p-2">Receipt</th>
+          <th class="text-right p-2">Grand Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+          <tr class="border-t">
+            <td class="p-2">{{ forloop.counter }}</td>
+            <td class="p-2">{{ r.case.case_number }}</td>
+            <td class="p-2">{{ r.case.applicant_name }}</td>
+            <td class="p-2">{{ r.case.bank.name }}</td>
+            <td class="p-2">{{ r.works.0.name }}</td>
+            <td class="p-2">{{ r.case.legal_reference_number|default:'--' }}</td>
+            {% for i in ""|center:max_works %}
+              {% if forloop.counter0 < r.works|length %}
+                <td class="p-2">{{ r.works|index:forloop.counter0.name }}</td>
+                <td class="p-2 text-right">{{ r.works|index:forloop.counter0.amount|floatformat:2 }}</td>
+              {% else %}
+                <td class="p-2"></td><td class="p-2"></td>
+              {% endif %}
+            {% endfor %}
+            <td class="p-2 text-right">₹ {{ r.works_total|floatformat:2 }}</td>
+            <td class="p-2 text-right">₹ {{ r.receipt|floatformat:2 }}</td>
+            <td class="p-2 text-right font-semibold">₹ {{ r.total|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="10" class="p-4 text-center text-gray-500">No rows</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="bg-gray-50 border-t">
+        <tr>
+          <td colspan="{{ 6 + (max_works*2) }}" class="p-2 text-right font-semibold">Totals</td>
+          <td class="p-2 text-right">₹ {{ summary.total_fees|floatformat:2 }}</td>
+          <td class="p-2 text-right">₹ {{ summary.total_receipts|floatformat:2 }}</td>
+          <td class="p-2 text-right font-semibold">₹ {{ summary.grand_total|floatformat:2 }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="mt-4">
+    <button onclick="window.print()" class="px-4 py-2 bg-indigo-600 text-white rounded">Print</button>
+  </div>
+</div>
+{% endblock %}

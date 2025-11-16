@@ -48,6 +48,31 @@ def advocate_or_admin_required(view_func):
     
     return wrapper
 
+def sro_or_admin_required(view_func):
+    """Decorator that requires user to be SRO, in ADMIN/CO-ADMIN group, or superuser"""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+
+        # Admins always allowed
+        is_admin = request.user.groups.filter(name__in=['ADMIN', 'CO-ADMIN']).exists() or request.user.is_superuser
+        if is_admin:
+            return view_func(request, *args, **kwargs)
+
+        # Check if user is an SRO
+        try:
+            employee = Employee.objects.get(user=request.user)
+            if employee.employee_type == 'sro':
+                return view_func(request, *args, **kwargs)
+        except Employee.DoesNotExist:
+            pass
+
+        messages.error(request, "You don't have permission to access this page.")
+        return redirect('dashboard')
+
+    return wrapper
+
 def get_user_employee(user):
     """Helper function to get employee object for a user"""
     try:
