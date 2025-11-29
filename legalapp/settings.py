@@ -1,8 +1,6 @@
 import os
 from pathlib import Path
 
-import dj_database_url
-
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -15,10 +13,7 @@ SECRET_KEY = 'django-insecure-#7j8%^mi7s9q83uo%ab9+!6$%n_wq@*shm@=w-ah#l-b@lz9zs
 DEBUG = True
 ALLOWED_HOSTS = []
 
-CSRF_TRUSTED_ORIGINS = [
-    # 'https://f53c0c5f2f4b.ngrok-free.app',
-    # 'https://477c935bbdcf.ngrok-free.app',
-]
+
 
 
 # Application definition
@@ -78,12 +73,12 @@ WSGI_APPLICATION = 'legalapp.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    "default": dj_database_url.parse(
-        "postgresql://ninexlegal_db_user:3sTObS3CvYQx3ewYZPJJtvp3rvHBAKmm@dpg-d3p2iip5pdvs73aan3gg-a.singapore-postgres.render.com/ninexlegal_db",
-        conn_max_age=600,
-        ssl_require=True
-    )
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
+
 
 
 
