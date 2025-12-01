@@ -209,7 +209,8 @@ class Case(models.Model):
 		# Global sequential serial (no per-state or per-FY counters)
 		# Determine the current max serial across all existing LRNs, then add 1.
 		# Baseline is 1670 if none exist or cannot be parsed.
-		max_serial = 1701
+		# Baseline such that the first new serial generated will be 1688
+		max_serial = 1687
 		existing_lrns = Case.objects.exclude(legal_reference_number__isnull=True) \
 			.exclude(legal_reference_number='') \
 			.values_list('legal_reference_number', flat=True)
