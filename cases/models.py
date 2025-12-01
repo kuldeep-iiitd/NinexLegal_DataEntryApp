@@ -188,7 +188,8 @@ class Case(models.Model):
 		Format: NX-<STATE>-<EMP>-<SERIAL>-<FY>
 		- STATE: state abbreviation (e.g., UP)
 		- EMP: two-letter initials of assigned advocate (fall back to name-derived or 'XX')
-		- SERIAL: zero-padded sequential number per (STATE + FY)
+		- SERIAL: single, global zero-padded sequential number (no per-state, no per-FY)
+		  Baseline starts at 1670, so the first new LRN will use 1671.
 		- FY: financial year in 'YY.YY' format, which changes after April 1
 		"""
 		from django.utils import timezone
@@ -205,9 +206,25 @@ class Case(models.Model):
 			start_year = (start_year - 1) % 100
 		end_year = (start_year + 1) % 100
 		fy_str = f"{start_year:02d}.{end_year:02d}"
-		# Sequential serial per (state + FY)
-		serial_scope_qs = Case.objects.filter(state__iexact=self.state).filter(legal_reference_number__endswith=f"-{fy_str}") if self.state else Case.objects.filter(legal_reference_number__endswith=f"-{fy_str}")
-		serial_num = (serial_scope_qs.count() + 1)
+		# Global sequential serial (no per-state or per-FY counters)
+		# Determine the current max serial across all existing LRNs, then add 1.
+		# Baseline is 1670 if none exist or cannot be parsed.
+		max_serial = 1670
+		existing_lrns = Case.objects.exclude(legal_reference_number__isnull=True) \
+			.exclude(legal_reference_number='') \
+			.values_list('legal_reference_number', flat=True)
+		for lrn in existing_lrns:
+			try:
+				# Expected pattern: NX-STATE-EMP-SERIAL-FY
+				parts = str(lrn).split('-')
+				if len(parts) >= 5:
+					serial_part = parts[3]
+					if serial_part.isdigit():
+						max_serial = max(max_serial, int(serial_part))
+			except Exception:
+				# Ignore malformed entries
+				pass
+		serial_num = max_serial + 1
 		self.legal_reference_number = f"NX-{state_abbr}-{emp_ini}-{serial_num:06d}-{fy_str}"
 		return self.legal_reference_number
 
