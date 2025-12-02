@@ -35,6 +35,7 @@
       <div>
         <label class="block text-sm font-medium mb-1 text-gray-700">File</label>
         {{ form.file }}
+        <p class="text-gray-500 text-xs mt-1">Allowed: PDF, Word (DOC/DOCX), Images</p>
         {% if form.file.errors %}
           <p class="text-red-600 text-sm mt-1">{{ form.file.errors|join:", " }}</p>
         {% endif %}

@@ -84,12 +84,12 @@
             <label class="block text-sm font-semibold text-white mb-2">
               <i class="fas fa-file-upload mr-1"></i>Supporting Document <span class="text-red-400">*</span>
             </label>
-            <input type="file" name="supporting_document" accept=".pdf,image/*" required
+            <input type="file" name="supporting_document" accept=".pdf,.doc,.docx,image/*" required
               class="w-full px-4 py-3 border border-white/30 rounded-xl focus:ring-2 focus:ring-white/50 focus:border-white/50 bg-white/10 backdrop-blur text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
             {% if form.supporting_document.errors %}
               <p class="text-red-300 text-sm mt-2">{{ form.supporting_document.errors }}</p>
             {% endif %}
-            <p class="text-xs text-white/70 mt-2">Upload PDF / Image proof. This is mandatory.</p>
+            <p class="text-xs text-white/70 mt-2">Upload PDF, Word (DOC/DOCX), or Image. This is mandatory.</p>
           </div>
 
           <div>

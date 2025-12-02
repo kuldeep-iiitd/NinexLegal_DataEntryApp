@@ -12,7 +12,7 @@
         <form method="post" enctype="multipart/form-data" class="space-y-4">
           {% csrf_token %}
           <div>
-            <label class="block text-sm font-medium text-white">Final Document (PDF/Image)</label>
+            <label class="block text-sm font-medium text-white">Final Document (PDF/DOC/Image)</label>
             {{ form.supporting_document }}
             {% if form.supporting_document.errors %}
               <p class="text-red-600 text-sm">{{ form.supporting_document.errors.0 }}</p>
@@ -46,8 +46,8 @@
                   </div>
                   <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div class="md:col-span-2">
-                      <label class="block text-xs font-medium text-white">Final Document (PDF/Image)</label>
-                      <input type="file" name="child_doc_{{ c.id }}" accept=".pdf,image/*" class="mt-1 block w-full text-xs text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700" />
+                      <label class="block text-xs font-medium text-white">Final Document (PDF/DOC/Image)</label>
+                      <input type="file" name="child_doc_{{ c.id }}" accept=".pdf,.doc,.docx,image/*" class="mt-1 block w-full text-xs text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700" />
                     </div>
                     <div>
                       <label class="block text-xs font-medium text-white">Description</label>

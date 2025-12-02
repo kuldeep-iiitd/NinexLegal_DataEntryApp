@@ -299,7 +299,7 @@
         newForm.className = 'document-form grid grid-cols-1 md:grid-cols-12 gap-3 items-center';
         newForm.innerHTML = `
             <div class="md:col-span-5"><input type="text" name="document-${formCount}-name" class="form-control" placeholder="Document Name"></div>
-            <div class="md:col-span-5"><input type="file" name="document-${formCount}-file" class="form-control"></div>
+            <div class="md:col-span-5"><input type="file" name="document-${formCount}-file" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.xls,.xlsx,.txt"></div>
             <div class="md:col-span-2 flex items-center gap-2">
                 <input type="checkbox" name="document-${formCount}-DELETE">
                 <label class="text-red-300 text-sm">Remove</label>

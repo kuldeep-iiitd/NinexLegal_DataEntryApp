@@ -16,7 +16,7 @@
 
     <div class="border rounded p-4">
       <h3 class="font-semibold mb-2">Parent Case Document</h3>
-      <input type="file" name="doc_{{ parent.id }}" class="w-full border rounded p-2" accept=".pdf,image/*" required />
+      <input type="file" name="doc_{{ parent.id }}" class="w-full border rounded p-2" accept=".pdf,.doc,.docx,image/*" required />
       {% if errors.parent %}<div class="text-red-600 text-sm mt-1">{{ errors.parent }}</div>{% endif %}
       <input type="text" name="desc_{{ parent.id }}" class="w-full border rounded p-2 mt-2" placeholder="Optional description" />
     </div>
@@ -34,7 +34,7 @@
                   <div><span class="font-semibold">LRN:</span> <span class="font-mono">{{ c.legal_reference_number }}</span></div>
                 </div>
               </div>
-              <input type="file" name="doc_{{ c.id }}" class="w-full border rounded p-2 mt-2" accept=".pdf,image/*" required />
+              <input type="file" name="doc_{{ c.id }}" class="w-full border rounded p-2 mt-2" accept=".pdf,.doc,.docx,image/*" required />
               {% if errors.c.id %}<div class="text-red-600 text-sm mt-1">{{ errors.c.id }}</div>{% endif %}
               <input type="text" name="desc_{{ c.id }}" class="w-full border rounded p-2 mt-2" placeholder="Optional description" />
             </div>

@@ -323,7 +323,7 @@ EmployeeDocumentFormSet = modelformset_factory(
     can_delete=True,
     widgets={
         'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Document Name'}),
-        'file': forms.FileInput(attrs={'class': 'form-control'}),
+        'file': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.xls,.xlsx,.txt'}),
     }
 )
 
@@ -633,8 +633,8 @@ class ChildCaseForm(forms.Form):
 class CaseDocumentUploadForm(forms.Form):
     supporting_document = forms.FileField(
         required=True,
-        label="Upload Supporting Document (PDF or Image)",
-        widget=forms.ClearableFileInput(attrs={'accept':'.pdf,image/*','class':'w-full border rounded p-2'})
+        label="Upload Supporting Document (PDF/DOC/Image)",
+        widget=forms.ClearableFileInput(attrs={'accept':'.pdf,.doc,.docx,image/*','class':'w-full border rounded p-2'})
     )
     document_description = forms.CharField(
         required=False,
@@ -650,9 +650,14 @@ class CaseDocumentUploadForm(forms.Form):
         else:
             if f.size > 5 * 1024 * 1024:
                 self.add_error('supporting_document', 'File too large (max 5MB).')
-            allowed = ['application/pdf','image/jpeg','image/png','image/gif','image/webp']
+            allowed = [
+                'application/pdf',
+                'image/jpeg','image/png','image/gif','image/webp',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ]
             if hasattr(f, 'content_type') and f.content_type not in allowed:
-                self.add_error('supporting_document', 'Unsupported file type. Upload PDF or image.')
+                self.add_error('supporting_document', 'Unsupported file type. Upload PDF, DOC/DOCX, or image.')
         return cd
 
 
@@ -763,7 +768,7 @@ class SROUpdateForm(forms.Form):
     receipt_number = forms.CharField(required=False, max_length=50, widget=forms.TextInput(attrs={'class':'w-full border rounded p-2','placeholder':'Receipt number (optional)'}))
     receipt_amount = forms.DecimalField(required=True, max_digits=10, decimal_places=2, widget=forms.NumberInput(attrs={'class':'w-full border rounded p-2','placeholder':'Amount received'}))
     receipt_expense = forms.DecimalField(required=False, max_digits=10, decimal_places=2, widget=forms.NumberInput(attrs={'class':'w-full border rounded p-2','placeholder':'Receipt expense (optional)'}))
-    supporting_document = forms.FileField(required=True, label="Upload Receipt (PDF or Image)", widget=forms.ClearableFileInput(attrs={'accept':'.pdf,image/*','class':'w-full border rounded p-2'}))
+    supporting_document = forms.FileField(required=True, label="Upload Receipt (PDF/DOC/Image)", widget=forms.ClearableFileInput(attrs={'accept':'.pdf,.doc,.docx,image/*','class':'w-full border rounded p-2'}))
     document_description = forms.CharField(required=False, max_length=255, widget=forms.TextInput(attrs={'class':'w-full border rounded p-2','placeholder':'Optional description'}))
 
     def clean(self):
@@ -774,9 +779,14 @@ class SROUpdateForm(forms.Form):
         else:
             if f.size > 5 * 1024 * 1024:
                 self.add_error('supporting_document', 'File too large (max 5MB).')
-            allowed = ['application/pdf','image/jpeg','image/png','image/gif','image/webp']
+            allowed = [
+                'application/pdf',
+                'image/jpeg','image/png','image/gif','image/webp',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ]
             if hasattr(f, 'content_type') and f.content_type not in allowed:
-                self.add_error('supporting_document', 'Unsupported file type. Upload PDF or image.')
+                self.add_error('supporting_document', 'Unsupported file type. Upload PDF, DOC/DOCX, or image.')
         amt = cd.get('receipt_amount')
         if amt is not None and amt <= 0:
             self.add_error('receipt_amount', 'Amount must be greater than zero.')

@@ -1065,9 +1065,14 @@ def case_upload_documents_group(request, case_id):
 			if file.size > 5 * 1024 * 1024:
 				errors[c.id] = 'File too large (max 5MB).'
 				continue
-			allowed = ['application/pdf','image/jpeg','image/png','image/gif','image/webp']
+			allowed = [
+				'application/pdf',
+				'image/jpeg','image/png','image/gif','image/webp',
+				'application/msword',
+				'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			]
 			if hasattr(file, 'content_type') and file.content_type not in allowed:
-				errors[c.id] = 'Unsupported file type. Upload PDF or image.'
+				errors[c.id] = 'Unsupported file type. Upload PDF, DOC/DOCX, or image.'
 				continue
 			to_create.append((c, file, desc))
 		if errors:
@@ -1111,10 +1116,28 @@ class FinalizeWithDocumentForm(forms.Form):
 		('positive', 'Positive'),
 		('negative', 'Negative'),
 	)
-	supporting_document = forms.FileField(required=True)
+	supporting_document = forms.FileField(required=True, widget=forms.ClearableFileInput(attrs={'accept':'.pdf,.doc,.docx,image/*','class':'w-full border rounded p-2'}))
 	document_description = forms.CharField(required=False, max_length=200)
 	status = forms.ChoiceField(choices=STATUS_CHOICES, required=True)
 	remark = forms.CharField(required=False, max_length=500)
+
+	def clean(self):
+		cd = super().clean()
+		f = self.files.get('supporting_document')
+		if not f:
+			self.add_error('supporting_document', 'Final document is required.')
+		else:
+			if hasattr(f, 'size') and f.size > 5 * 1024 * 1024:
+				self.add_error('supporting_document', 'File too large (max 5MB).')
+			allowed = [
+				'application/pdf',
+				'image/jpeg','image/png','image/gif','image/webp',
+				'application/msword',
+				'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			]
+			if hasattr(f, 'content_type') and f.content_type not in allowed:
+				self.add_error('supporting_document', 'Unsupported file type. Upload PDF, DOC/DOCX, or image.')
+		return cd
 
 
 @advocate_or_admin_required
@@ -1716,9 +1739,14 @@ def sro_update_group(request, case_id):
 			if hasattr(f, 'size') and f.size > 5 * 1024 * 1024:
 				errors[c.id] = 'File too large (max 5MB).'
 				continue
-			allowed = ['application/pdf','image/jpeg','image/png','image/gif','image/webp']
+			allowed = [
+				'application/pdf',
+				'image/jpeg','image/png','image/gif','image/webp',
+				'application/msword',
+				'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			]
 			if hasattr(f, 'content_type') and f.content_type not in allowed:
-				errors[c.id] = 'Unsupported file type. Upload PDF or image.'
+				errors[c.id] = 'Unsupported file type. Upload PDF, DOC/DOCX, or image.'
 				continue
 			# Replace only previous receipts; preserve any final document(s)
 			for d in list(c.documents.filter(is_receipt=True)):
