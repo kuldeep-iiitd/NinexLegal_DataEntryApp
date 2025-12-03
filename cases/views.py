@@ -212,7 +212,7 @@ def view_cases(request):
 			assigned_advocate=employee,
 			parent_case__isnull=True
 		).order_by('-updated_at')
-		active_statuses = ['pending','on_hold','on_query','query','document_pending','sro_document_pending']
+		active_statuses = ['pending','draft','on_hold','on_query','query','document_pending','sro_document_pending']
 		completed_statuses = ['positive','positive_subject_tosearch','negative']
 		today = timezone.localdate()
 		pending_all = qs.filter(status__in=active_statuses)
@@ -911,6 +911,14 @@ def case_action(request, case_id):
 				case.generate_legal_reference_number()
 				if forward:
 					case.forwarded_to_sro = True
+			elif action == 'draft':
+				case.status = 'draft'
+				case.forwarded_to_sro = False
+				case.completed_at = None
+			elif action == 'query':
+				case.status = 'query'
+				case.forwarded_to_sro = False
+				case.completed_at = None
 			else:
 				messages.error(request, 'Invalid action selected.')
 				return redirect('case_action', case_id=case.id)

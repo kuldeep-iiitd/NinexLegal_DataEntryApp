@@ -542,6 +542,8 @@ class CaseDetailsForm(forms.ModelForm):
 
 class CaseActionForm(forms.Form):
     action = forms.ChoiceField(choices=[
+        ('draft','Draft'),
+        ('query','Query'),
         ('positive_subject_tosearch','Positive Subject to Search'),
         ('positive','Positive'),
         ('negative','Negative')
