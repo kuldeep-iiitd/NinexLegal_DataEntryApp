@@ -212,7 +212,7 @@ def view_cases(request):
 			assigned_advocate=employee,
 			parent_case__isnull=True
 		).order_by('-updated_at')
-		active_statuses = ['pending','on_hold','on_query','document_pending','sro_document_pending']
+		active_statuses = ['pending','on_hold','on_query','query','document_pending','sro_document_pending']
 		completed_statuses = ['positive','positive_subject_tosearch','negative']
 		today = timezone.localdate()
 		pending_all = qs.filter(status__in=active_statuses)
@@ -243,13 +243,16 @@ def view_cases(request):
 	pending_buckets = [('Pending', 'pending', 'purple')]
 	active_buckets = [
 		('On Hold', 'on_hold', 'blue'),
+		('On Query', 'on_query', 'yellow'),
+		('Query', 'query', 'yellow'),
 		('Document Pending', 'document_pending', 'indigo'),
 		('SRO Document Pending', 'sro_document_pending', 'cyan'),
 	]
+	draft_buckets = [('Draft', 'draft', 'gray')]
 	completed_positive_buckets = [('Positive', 'positive', 'emerald')]
 	completed_negative_buckets = [('Negative', 'negative', 'red')]
 
-	all_buckets = quotation_buckets + pending_assignment_buckets + pending_buckets + active_buckets + completed_positive_buckets + completed_negative_buckets
+	all_buckets = draft_buckets + quotation_buckets + pending_assignment_buckets + pending_buckets + active_buckets + completed_positive_buckets + completed_negative_buckets
 	status_counts = {s: 0 for s in [b[1] for b in all_buckets]}
 	for c in cases:
 		if c.status in status_counts:
@@ -260,6 +263,7 @@ def view_cases(request):
 		'quotation_buckets': quotation_buckets,
 		'pending_assignment_buckets': pending_assignment_buckets,
 		'pending_buckets': pending_buckets,
+		'draft_buckets': draft_buckets,
 		'active_buckets': active_buckets,
 		'completed_positive_buckets': completed_positive_buckets,
 		'completed_negative_buckets': completed_negative_buckets,
@@ -293,7 +297,7 @@ def advocate_cases_filtered(request, filter_type):
 	elif is_admin:
 		qs = qs.filter(parent_case__isnull=True)
 	status_map = {
-		'active': ['on_hold','document_pending','sro_document_pending'],
+		'active': ['on_hold','on_query','query','document_pending','sro_document_pending'],
 		'pending': ['pending'],
 		'pending_assignment': ['pending_assignment'],
 		'quotation': ['quotation'],
@@ -302,8 +306,8 @@ def advocate_cases_filtered(request, filter_type):
 		'hold': ['on_hold'],
 		'doc_hold': ['document_pending','sro_document_pending'],
 		'completed': ['positive','negative','positive_subject_tosearch'],
-		'hold_query_doc': ['on_hold','document_pending','sro_document_pending'],
-		'all': ['quotation','pending_assignment','pending','document_pending','sro_document_pending','on_hold','positive','negative','positive_subject_tosearch']
+		'hold_query_doc': ['on_hold','on_query','query','document_pending','sro_document_pending'],
+		'all': ['draft','quotation','pending_assignment','pending','document_pending','sro_document_pending','on_hold','on_query','query','positive','negative','positive_subject_tosearch']
 	}
 	if filter_type in status_map:
 		qs = qs.filter(status__in=status_map[filter_type])
@@ -315,13 +319,16 @@ def advocate_cases_filtered(request, filter_type):
 	pending_buckets = [('Pending', 'pending', 'purple')]
 	active_buckets = [
 		('On Hold', 'on_hold', 'blue'),
+		('On Query', 'on_query', 'yellow'),
+		('Query', 'query', 'yellow'),
 		('Document Pending', 'document_pending', 'indigo'),
 		('SRO Document Pending', 'sro_document_pending', 'cyan'),
 	]
+	draft_buckets = [('Draft', 'draft', 'gray')]
 	completed_positive_buckets = [('Positive', 'positive', 'emerald')]
 	completed_negative_buckets = [('Negative', 'negative', 'red')]
 
-	all_buckets = quotation_buckets + pending_assignment_buckets + pending_buckets + active_buckets + completed_positive_buckets + completed_negative_buckets
+	all_buckets = draft_buckets + quotation_buckets + pending_assignment_buckets + pending_buckets + active_buckets + completed_positive_buckets + completed_negative_buckets
 	status_counts = {s: 0 for s in [b[1] for b in all_buckets]}
 	for c in cases:
 		if c.status in status_counts:
@@ -333,6 +340,7 @@ def advocate_cases_filtered(request, filter_type):
 		'quotation_buckets': quotation_buckets,
 		'pending_assignment_buckets': pending_assignment_buckets,
 		'pending_buckets': pending_buckets,
+		'draft_buckets': draft_buckets,
 		'active_buckets': active_buckets,
 		'completed_positive_buckets': completed_positive_buckets,
 		'completed_negative_buckets': completed_negative_buckets,
@@ -945,7 +953,7 @@ def case_put_on_hold(request, case_id):
 		messages.error(request, 'Finalized cases cannot be placed on hold.')
 		return redirect('case_detail', case_id=case.id)
 	# Only allow on-hold for early lifecycle statuses per policy
-	allowed_statuses = ['pending_assignment', 'pending', 'on_query']
+	allowed_statuses = ['pending_assignment', 'pending', 'on_query', 'query']
 	if case.status not in allowed_statuses and case.status != 'on_hold':
 		messages.error(request, 'Putting on hold is only allowed before substantial work (Pending Assignment / Pending / On Query).')
 		return redirect('case_detail', case_id=case.id)

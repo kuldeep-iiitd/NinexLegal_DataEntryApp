@@ -41,7 +41,7 @@ def dashboard(request):
             # Filter out child cases - only show parent cases
             assigned_cases = Case.objects.filter(assigned_advocate=employee, parent_case__isnull=True).order_by('-updated_at')
             total_cases = assigned_cases.count()
-            active_cases = assigned_cases.filter(status__in=['on_hold', 'on_query']).count()
+            active_cases = assigned_cases.filter(status__in=['on_hold', 'on_query', 'query']).count()
             pending_cases_qs = assigned_cases.filter(status='pending')
             pending_cases = pending_cases_qs.count()
             completed_cases = assigned_cases.filter(status__in=['positive', 'negative','positive_subject_tosearch']).count()
@@ -71,7 +71,7 @@ def dashboard(request):
                     Q(legal_reference_number__icontains=completed_search)
                 ).order_by('-updated_at')
 
-            hold_query_doc_cases_list = assigned_cases.filter(status__in=['on_hold', 'on_query', 'document_pending'])
+            hold_query_doc_cases_list = assigned_cases.filter(status__in=['on_hold', 'on_query', 'query', 'document_pending'])
 
             context =  {
                 "username": user.username,
@@ -137,11 +137,13 @@ def dashboard(request):
         status_dict = {row['status']: row['count'] for row in status_counts}
         
         active_cards_def = [
+            ('draft','Draft'),
             ('quotation','Quotation'),
             ('pending_assignment','Pending Assign'),
             ('pending','Pending'),
             ('on_hold','On Hold'),
             ('on_query','On Query'),
+            ('query','Query'),
             ('document_pending','Doc Pending'),
         ]
         completed_cards_def = [
@@ -171,7 +173,7 @@ def dashboard(request):
             advocate_stats.append({
                 'advocate': adv,
                 'total_assigned': parent_cases.count(),
-                'pending_count': parent_cases.filter(status__in=['pending','on_hold','on_query','document_pending']).count(),
+                'pending_count': parent_cases.filter(status__in=['pending','on_hold','on_query','query','document_pending']).count(),
                 'completed_today': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date=today).count(),
                 'completed_yesterday': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date=yesterday).count(),
                 'completed_7days': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date__gte=last_7_days).count(),
@@ -189,7 +191,7 @@ def dashboard(request):
                 bank_stats.append({
                     'bank': bank,
                     'total_cases': total,
-                    'active_cases': parent_cases.filter(status__in=['pending','on_hold','on_query','document_pending','pending_assignment']).count(),
+                    'active_cases': parent_cases.filter(status__in=['pending','on_hold','on_query','query','document_pending','pending_assignment']).count(),
                     'completed_cases': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch']).count(),
                     'positive_cases': parent_cases.filter(status='positive').count(),
                     'negative_cases': parent_cases.filter(status='negative').count(),
@@ -251,11 +253,13 @@ def dashboard(request):
             status_dict = {row['status']: row['count'] for row in status_counts}
             
             active_cards_def = [
+                ('draft','Draft'),
                 ('quotation','Quotation'),
                 ('pending_assignment','Pending Assign'),
                 ('pending','Pending'),
                 ('on_hold','On Hold'),
                 ('on_query','On Query'),
+                ('query','Query'),
                 ('document_pending','Doc Pending'),
             ]
             completed_cards_def = [
@@ -283,7 +287,7 @@ def dashboard(request):
             
             # Bank stats
             bank_case_counts = Bank.objects.annotate(total_cases=Count('cases')).order_by('-total_cases')[:10]
-            bank_active_counts = Bank.objects.annotate(active_cases=Count('cases', filter=Q(cases__status__in=['pending','on_hold','on_query','document_pending']))).order_by('-active_cases')[:10]
+            bank_active_counts = Bank.objects.annotate(active_cases=Count('cases', filter=Q(cases__status__in=['pending','on_hold','on_query','query','document_pending']))).order_by('-active_cases')[:10]
             
             context = {
                 "username": user.username,
@@ -323,11 +327,13 @@ def admin_statistics(request):
     status_dict = {row['status']: row['count'] for row in status_counts}
 
     active_cards_def = [
+        ('draft','Draft','bg-gray-100'),
         ('quotation','Quotation','bg-gray-100'),
         ('pending_assignment','Pending Assign','bg-orange-100'),
         ('pending','Pending','bg-purple-100'),
         ('on_hold','On Hold','bg-blue-100'),
         ('on_query','On Query','bg-yellow-100'),
+        ('query','Query','bg-yellow-100'),
         ('document_pending','Doc Pending','bg-indigo-100'),
     ]
     completed_cards_def = [
@@ -349,7 +355,7 @@ def admin_statistics(request):
     advocates = Employee.objects.filter(employee_type='advocate', is_active=True)
     advocate_stats = advocates.annotate(
         total_assigned=Count('assigned_cases', distinct=True),
-        pending_count=Count('assigned_cases', filter=Q(assigned_cases__status__in=['pending','on_hold','on_query','document_pending']), distinct=True),
+        pending_count=Count('assigned_cases', filter=Q(assigned_cases__status__in=['pending','on_hold','on_query','query','document_pending']), distinct=True),
         completed_today=Count('assigned_cases', filter=Q(assigned_cases__status__in=['positive','negative','positive_subject_tosearch']) & Q(assigned_cases__updated_at__date=today), distinct=True),
     ).order_by('-pending_count')
 
@@ -357,11 +363,11 @@ def admin_statistics(request):
     bank_case_counts = Bank.objects.annotate(total_cases=Count('cases')).order_by('-total_cases')[:10]
 
     # Banks with active cases
-    bank_active_counts = Bank.objects.annotate(active_cases=Count('cases', filter=Q(cases__status__in=['pending','on_hold','on_query','document_pending']))).order_by('-active_cases')[:10]
+    bank_active_counts = Bank.objects.annotate(active_cases=Count('cases', filter=Q(cases__status__in=['pending','on_hold','on_query','query','document_pending']))).order_by('-active_cases')[:10]
 
     # Summary stats for header
     total_cases = Case.objects.filter(parent_case__isnull=True).count()
-    active_cases = Case.objects.filter(parent_case__isnull=True, status__in=['pending','on_hold','on_query','document_pending']).count()
+    active_cases = Case.objects.filter(parent_case__isnull=True, status__in=['pending','on_hold','on_query','query','document_pending']).count()
     completed_cases = Case.objects.filter(parent_case__isnull=True, status__in=['positive','negative','positive_subject_tosearch']).count()
 
     context = {
@@ -393,11 +399,13 @@ def cases_by_status(request, status):
     cases = Case.objects.filter(status=status, parent_case__isnull=True).select_related('assigned_advocate', 'bank', 'branch').order_by('-updated_at')
     
     status_labels = {
+        'draft': 'Draft',
         'quotation': 'Quotation',
         'pending_assignment': 'Pending Assignment',
         'pending': 'Pending',
         'on_hold': 'On Hold',
         'on_query': 'On Query',
+        'query': 'Query',
         'document_pending': 'Document Pending',
         'sro_document_pending': 'SRO Document Pending',
         'positive_subject_tosearch': 'Positive Subject to Search',
@@ -431,7 +439,7 @@ def cases_by_advocate(request, advocate_id):
     cases = Case.objects.filter(assigned_advocate=advocate, parent_case__isnull=True).select_related('bank', 'branch').order_by('-updated_at')
     
     # Categorize cases
-    pending = cases.filter(status__in=['pending', 'on_hold', 'on_query', 'document_pending'])
+    pending = cases.filter(status__in=['pending', 'on_hold', 'on_query', 'query', 'document_pending'])
     completed = cases.filter(status__in=['positive', 'negative', 'positive_subject_tosearch'])
     
     context = {
@@ -464,7 +472,7 @@ def cases_by_bank(request, bank_id):
     cases = Case.objects.filter(bank=bank, parent_case__isnull=True).select_related('assigned_advocate', 'branch').order_by('-updated_at')
     
     # Categorize cases
-    active = cases.filter(status__in=['pending', 'on_hold', 'on_query', 'document_pending', 'pending_assignment'])
+    active = cases.filter(status__in=['pending', 'on_hold', 'on_query', 'query', 'document_pending', 'pending_assignment'])
     completed = cases.filter(status__in=['positive', 'negative', 'positive_subject_tosearch'])
     
     context = {

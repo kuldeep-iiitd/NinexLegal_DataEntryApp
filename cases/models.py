@@ -99,11 +99,13 @@ class EmployeeDocument(models.Model):
 
 class Case(models.Model):
 	STATUS_CHOICES = [
+		('draft', 'Draft'),
 		('quotation', 'Quotation'),
 		('positive', 'Positive'),
 		('negative', 'Negative'),
 		('on_hold', 'On Hold'),
 		('on_query', 'On Query'),
+		('query', 'Query'),
 		('document_pending', 'Document Pending'),
 		('sro_document_pending', 'SRO Document Pending'),
 		('positive_subject_tosearch', 'Positive Subject to Search'),
