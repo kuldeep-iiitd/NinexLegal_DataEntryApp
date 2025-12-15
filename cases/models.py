@@ -281,6 +281,8 @@ class CaseDocument(models.Model):
 	description = models.CharField(max_length=255, blank=True, null=True)
 	# Explicit flag to distinguish SRO receipt vs final document
 	is_receipt = models.BooleanField(default=False)
+	# New: flag the single final document distinctly from additional documents
+	is_final = models.BooleanField(default=False)
 
 	def __str__(self):
 		return f"Document for {self.case.case_number} ({self.file.name.split('/')[-1]})"

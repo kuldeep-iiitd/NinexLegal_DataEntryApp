@@ -270,16 +270,28 @@
                         </div>
                         {% endif %}
 
-                        <h3 class="text-sm font-semibold text-gray-200 mb-3">Final Documents</h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-semibold text-gray-200">Final Documents</h3>
+                            {% if not is_sro %}
+                            <a href="{% url 'case_replace_final_document' case.id %}" class="inline-flex items-center px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-lg transition-all">
+                                <i class="fas fa-sync-alt mr-1"></i>Replace
+                            </a>
+                            {% endif %}
+                        </div>
                         {% if final_docs %}
                         <ul class="divide-y divide-white/10">
                             {% for doc in final_docs %}
-                            <li class="py-3 flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm font-medium text-white">{{ doc.file.name|slice:'15:' }}</p>
-                                    <p class="text-xs text-gray-200">Uploaded {{ doc.uploaded_at|date:'M d, Y H:i' }} {% if doc.uploaded_by %}by {% firstof doc.uploaded_by.name doc.uploaded_by.user.username 'Unknown' %}{% endif %}</p>
+                            <li class="py-3">
+                                <div class="flex items-center justify-between mb-1">
+                                    <p class="text-sm font-medium text-white">
+                                        <i class="fas fa-file-alt mr-1 text-blue-300"></i>
+                                        {% if doc.description %}{{ doc.description }}{% else %}{{ doc.file.name|slice:'15:' }}{% endif %}
+                                    </p>
+                                    <a href="{{ doc.file.url }}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-xs font-semibold rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all">
+                                        <i class="fas fa-eye mr-1"></i>View
+                                    </a>
                                 </div>
-                                <a href="{{ doc.file.url }}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-xs font-semibold rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all">View</a>
+                                <p class="text-xs text-gray-300">Uploaded {{ doc.uploaded_at|date:'M d, Y H:i' }} {% if doc.uploaded_by %}by {% firstof doc.uploaded_by.name doc.uploaded_by.user.username 'Unknown' %}{% endif %}</p>
                             </li>
                             {% empty %}
                             <li class="py-3 text-sm text-gray-200">No final documents uploaded yet.</li>
@@ -287,6 +299,28 @@
                         </ul>
                         {% else %}
                         <p class="text-sm text-gray-200">No final documents uploaded yet.</p>
+                        {% endif %}
+                        
+                        {% if additional_docs %}
+                        <div class="mt-6 pt-6 border-t border-white/10">
+                            <h3 class="text-sm font-semibold text-gray-200 mb-3">Additional Documents</h3>
+                            <ul class="divide-y divide-white/10">
+                                {% for doc in additional_docs %}
+                                <li class="py-3">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="text-sm font-medium text-white">
+                                            <i class="fas fa-paperclip mr-1 text-purple-300"></i>
+                                            {% if doc.description %}{{ doc.description }}{% else %}{{ doc.file.name|slice:'15:' }}{% endif %}
+                                        </p>
+                                        <a href="{{ doc.file.url }}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all">
+                                            <i class="fas fa-eye mr-1"></i>View
+                                        </a>
+                                    </div>
+                                    <p class="text-xs text-gray-300">Uploaded {{ doc.uploaded_at|date:'M d, Y H:i' }} {% if doc.uploaded_by %}by {% firstof doc.uploaded_by.name doc.uploaded_by.user.username 'Unknown' %}{% endif %}</p>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -499,16 +533,18 @@
                         <a href="{% url 'work_on_case' case.id %}" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all">Work on Case</a>
                         {% if case.status == 'document_pending' or case.status == 'sro_document_pending' %}
                         <a href="{% url 'case_finalize_with_document' case.id %}" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-pink-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-pink-700 transition-all">Upload Final & Status</a>
+                        {% if case.status == 'draft' %}
+                        <a href="{% url 'case_finalize_as_draft' case.id %}" class="mt-2 w-full inline-flex items-center justify-center px-4 py-2.5 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-all">Upload Draft Document</a>
+                        {% elif case.status == 'query' %}
+                        <a href="{% url 'case_finalize_as_query' case.id %}" class="mt-2 w-full inline-flex items-center justify-center px-4 py-2.5 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 transition-all">Upload Query Document</a>
                         {% endif %}
-                        {% if case.status == 'pending_assignment' or case.status == 'pending' or case.status == 'on_query' %}
-                        <form method="post" action="{% url 'case_put_on_hold' case.id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all">
-                                <i class="fas fa-pause-circle mr-2"></i>
-                                Put On Hold
-                            </button>
-                        </form>
                         {% endif %}
+                        {% if case.status == 'pending_assignment' or case.status == 'pending' or case.status == 'draft' or case.status == 'query' %}
+                            {% if case.status == 'draft' or case.status == 'query' %}
+                            <a href="{% url 'case_reopen' case.id %}" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-all">Reopen Case</a>
+                            {% endif %}
+                        {% endif %}
+                        <a href="{% url 'case_add_document' case.id %}" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all">Add Additional Document</a>
                         {% if not is_finalized %}
                             {% if request.user.groups.all.0.name == 'ADMIN' or request.user.groups.all.0.name == 'CO-ADMIN' or request.user.is_superuser %}
                             <a href="{% url 'add_case_work' case.id %}" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white font-semibold rounded-lg hover:from-emerald-700 hover:to-green-700 transition-all">
@@ -516,7 +552,7 @@
                             </a>
                             {% endif %}
                         {% endif %}
-                        {# Removed Add Child Case from Actions per request #}
+                        <a href="{% url 'add_child_case' case.id %}" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all">Add Child Case</a>
                         {% endif %}
                         {% if is_admin and not is_active_quotation %}
                         <a href="{% url 'reassign_case_advocate' case.id %}" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-700 hover:to-orange-700 transition-all">Reassign Advocate</a>

@@ -1,0 +1,109 @@
+{% extends 'cases/base.html' %}
+{% block title %}Replace Final Document{% endblock %}
+{% block content %}
+<style>
+  .form-control { 
+    width: 100%; 
+    border: 1px solid rgba(255, 255, 255, 0.4); 
+    border-radius: 0.5rem; 
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    backdrop-filter: blur(10px);
+    font-weight: 500;
+  }
+  .form-control::placeholder {
+    color: rgba(31, 41, 55, 0.6);
+  }
+  .form-control:focus {
+    outline: none;
+    border-color: #1e3a8a;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  }
+  input[type="file"]::file-selector-button {
+    background: linear-gradient(to right, #3b82f6, #8b5cf6);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 1rem;
+  }
+  input[type="file"]::file-selector-button:hover {
+    background: linear-gradient(to right, #2563eb, #7c3aed);
+  }
+</style>
+
+<div class="min-h-screen py-8" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-white/30">
+      <div class="px-6 py-5 border-b border-white/20 bg-white/20 backdrop-blur">
+        <div class="flex items-center">
+          <div class="bg-white/20 backdrop-blur-sm p-2.5 rounded-xl mr-3 border border-white/30">
+            <i class="fas fa-sync-alt text-2xl text-white"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-white">Replace Final Document</h2>
+            <p class="text-xs text-purple-100 mt-0.5">Case: {{ case.case_number }} - {{ case.legal_reference_number }}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="p-8">
+        {% if messages %}
+          <div class="mb-6 space-y-2">
+            {% for message in messages %}
+              <div class="{% if message.tags == 'error' %}bg-red-500/30 border-red-400/60{% else %}bg-green-500/30 border-green-400/60{% endif %} border text-white p-4 rounded-xl backdrop-blur-md">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        
+        {% if final_doc %}
+        <div class="bg-yellow-500/30 border border-yellow-400/60 text-white p-4 rounded-xl backdrop-blur-md mb-6">
+          <p class="text-sm font-semibold mb-1"><i class="fas fa-file-alt mr-2"></i>Current Final Document:</p>
+          <p class="text-sm">{{ final_doc.description|default:"No description" }}</p>
+          <p class="text-xs text-yellow-100 mt-1">Uploaded: {{ final_doc.uploaded_at|date:"d M Y, g:i A" }}</p>
+        </div>
+        {% else %}
+        <div class="bg-blue-500/30 border border-blue-400/60 text-white p-4 rounded-xl backdrop-blur-md mb-6">
+          <p class="text-sm"><i class="fas fa-info-circle mr-2"></i>No final document found. This will create a new final document.</p>
+        </div>
+        {% endif %}
+        
+        <div class="bg-red-500/30 border border-red-400/60 text-white p-4 rounded-xl backdrop-blur-md mb-6">
+          <p class="text-sm"><i class="fas fa-exclamation-triangle mr-2"></i><strong>Warning:</strong> Replacing the final document will permanently delete the current file. This action cannot be undone.</p>
+        </div>
+        
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+          {% csrf_token %}
+          
+          <div>
+            <label class="block text-sm font-semibold text-white mb-2"><i class="fas fa-file-upload mr-1"></i>New Final Document <span class="text-red-300">*</span></label>
+            <input type="file" name="final_document" accept=".pdf,.doc,.docx,image/*" required class="form-control"/>
+            <p class="text-xs text-purple-100 mt-2">Upload PDF, Word (DOC/DOCX), or Image. Max 10MB.</p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-white mb-2"><i class="fas fa-tag mr-1"></i>Document Description</label>
+            <input type="text" name="description" value="{{ final_doc.description|default:'' }}" placeholder="e.g., Updated Final Report with Corrections" class="form-control"/>
+            <p class="text-xs text-purple-100 mt-2">Optional: Provide a description for this document</p>
+          </div>
+          
+          <div class="flex justify-end gap-3 pt-6 border-t border-white/20">
+            <a href="{% url 'case_detail' case.id %}" class="inline-flex items-center px-6 py-3 border border-white/30 rounded-xl text-white bg-white/10 backdrop-blur hover:bg-white/20 transition-all duration-200">
+              <i class="fas fa-arrow-left mr-2"></i>Cancel
+            </a>
+            <button type="submit" class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg">
+              <i class="fas fa-sync-alt mr-2"></i>Replace Document
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

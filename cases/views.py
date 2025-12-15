@@ -190,12 +190,25 @@ def view_cases(request):
 
 	search_query = request.GET.get('search', '').strip()
 	completed_search = request.GET.get('completed_search', '').strip()
-	# Admins: show only parent cases to keep list concise; Advocates: show PARENT cases only (children shown inside parent detail)
-	base_admin_qs = Case.objects.select_related('bank', 'case_type', 'assigned_advocate').filter(parent_case__isnull=True)
+	# Admins: show all cases (both parents and children independently)
 	if is_admin:
+		cases_qs = Case.objects.select_related('bank', 'case_type', 'assigned_advocate').all()
 		if search_query:
-			# Search across parent fields and child fields, but return distinct parents only
-			cases_qs = base_admin_qs.filter(
+			# Search across all case fields
+			cases_qs = cases_qs.filter(
+				Q(applicant_name__icontains=search_query) |
+				Q(case_number__icontains=search_query) |
+				Q(legal_reference_number__icontains=search_query)
+			).distinct()
+		cases = cases_qs.order_by('-created_at')
+	elif employee and employee.employee_type == 'advocate':
+		# Advocate view: show all assigned cases (parents and children). Include children whose parent is assigned to advocate.
+		qs = Case.objects.select_related('bank', 'case_type', 'assigned_advocate').filter(
+			Q(assigned_advocate=employee) | Q(parent_case__assigned_advocate=employee)
+		).order_by('-updated_at')
+		# Advocate search across their cases (including child fields)
+		if search_query:
+			qs = qs.filter(
 				Q(applicant_name__icontains=search_query) |
 				Q(case_number__icontains=search_query) |
 				Q(legal_reference_number__icontains=search_query) |
@@ -203,16 +216,9 @@ def view_cases(request):
 				Q(child_cases__case_number__icontains=search_query) |
 				Q(child_cases__legal_reference_number__icontains=search_query)
 			).distinct()
-		else:
-			cases_qs = base_admin_qs
-		cases = cases_qs.order_by('-created_at')
-	elif employee and employee.employee_type == 'advocate':
-		# Advocate view: show only PARENT cases; child cases are displayed within parent detail
-		qs = Case.objects.select_related('bank', 'case_type', 'assigned_advocate').filter(
-			assigned_advocate=employee,
-			parent_case__isnull=True
-		).order_by('-updated_at')
-		active_statuses = ['pending','draft','on_hold','on_query','query','document_pending','sro_document_pending']
+		active_statuses = ['pending','on_hold','on_query','query','document_pending','sro_document_pending']
+		# Remove deprecated on_hold/on_query from advocate buckets and keep Draft out of Pending
+		active_statuses = ['pending','query','document_pending','sro_document_pending']
 		completed_statuses = ['positive','positive_subject_tosearch','negative']
 		today = timezone.localdate()
 		pending_all = qs.filter(status__in=active_statuses)
@@ -227,6 +233,7 @@ def view_cases(request):
 		pending_today = pending_all.filter(updated_at__date=today)
 		pending_overall = pending_all.exclude(id__in=pending_today.values('id'))
 		completed_results = []
+		# Keep completed-specific search for those who want to narrow to final statuses
 		if completed_search:
 			completed_results = qs.filter(status__in=completed_statuses).filter(
 				Q(applicant_name__icontains=completed_search) |
@@ -242,10 +249,7 @@ def view_cases(request):
 	pending_assignment_buckets = [('Pending Assignment', 'pending_assignment', 'orange')]
 	pending_buckets = [('Pending', 'pending', 'purple')]
 	active_buckets = [
-		('On Hold', 'on_hold', 'blue'),
-		('On Query', 'on_query', 'yellow'),
 		('Query', 'query', 'yellow'),
-		('Document Pending', 'document_pending', 'indigo'),
 		('SRO Document Pending', 'sro_document_pending', 'cyan'),
 	]
 	draft_buckets = [('Draft', 'draft', 'gray')]
@@ -254,10 +258,44 @@ def view_cases(request):
 
 	all_buckets = draft_buckets + quotation_buckets + pending_assignment_buckets + pending_buckets + active_buckets + completed_positive_buckets + completed_negative_buckets
 	status_counts = {s: 0 for s in [b[1] for b in all_buckets]}
-	for c in cases:
-		if c.status in status_counts:
-			status_counts[c.status] += 1
+	# For advocate view, derive counts from categorized querysets to avoid misclassifying drafts as pending
+	if not is_admin:
+		try:
+			# Pending count should reflect active pending statuses only
+			active_statuses = ['pending','query','document_pending','sro_document_pending']
+			status_counts['pending'] = cases.filter(status__in=['pending']).count()
+			status_counts['query'] = cases.filter(status='query').count()
+			status_counts['sro_document_pending'] = cases.filter(status='sro_document_pending').count()
+			status_counts['draft'] = cases.filter(status='draft').count()
+			status_counts['positive'] = cases.filter(status='positive').count()
+			status_counts['positive_subject_tosearch'] = cases.filter(status='positive_subject_tosearch').count()
+			status_counts['negative'] = cases.filter(status='negative').count()
+			# Quotation and pending_assignment if present
+			status_counts['quotation'] = cases.filter(status='quotation').count()
+			status_counts['pending_assignment'] = cases.filter(status='pending_assignment').count()
+		except Exception:
+			# Fallback to naive counts if anything goes wrong
+			for c in cases:
+				if c.status in status_counts:
+					status_counts[c.status] += 1
+	else:
+		# Admin view: count parent cases + their children for accurate totals
+		# Get all parent case IDs from the filtered set
+		parent_ids = list(cases.values_list('id', flat=True))
+		# Query all cases: parents in the filtered set + children of those parents
+		all_cases_qs = Case.objects.filter(Q(id__in=parent_ids) | Q(parent_case_id__in=parent_ids))
+		# Count by status
+		status_counts['pending'] = all_cases_qs.filter(status='pending').count()
+		status_counts['query'] = all_cases_qs.filter(status='query').count()
+		status_counts['sro_document_pending'] = all_cases_qs.filter(status='sro_document_pending').count()
+		status_counts['draft'] = all_cases_qs.filter(status='draft').count()
+		status_counts['positive'] = all_cases_qs.filter(status='positive').count()
+		status_counts['positive_subject_tosearch'] = all_cases_qs.filter(status='positive_subject_tosearch').count()
+		status_counts['negative'] = all_cases_qs.filter(status='negative').count()
+		status_counts['quotation'] = all_cases_qs.filter(status='quotation').count()
+		status_counts['pending_assignment'] = all_cases_qs.filter(status='pending_assignment').count()
 
+	# Build base context
 	context = {
 		'cases': cases,
 		'quotation_buckets': quotation_buckets,
@@ -267,12 +305,19 @@ def view_cases(request):
 		'active_buckets': active_buckets,
 		'completed_positive_buckets': completed_positive_buckets,
 		'completed_negative_buckets': completed_negative_buckets,
+		# Include SRO document pending cases
+		# Admin: show all; Advocate: show only those assigned to them (parents or children)
+		'sro_document_pending_list': Case.objects.select_related('bank','case_type','assigned_advocate').filter(status='sro_document_pending').order_by('-updated_at'),
 		'status_counts': status_counts,
 		'is_admin': is_admin,
 		'search_query': search_query,
 	}
 	# Advocate-specific context additions
 	if not is_admin and employee and employee.employee_type == 'advocate':
+		debug_sro_ids = list(qs.filter(status='sro_document_pending').values_list('id', flat=True))
+		# Narrow SRO Document Pending to advocate's cases
+		# Use the advocate-scoped queryset to avoid any mismatch and ensure distinct results
+		context['sro_document_pending_list'] = qs.filter(status='sro_document_pending').order_by('-updated_at')
 		context.update({
 			'pending_today': pending_today,
 			'pending_overall': pending_overall,
@@ -280,6 +325,8 @@ def view_cases(request):
 			'reassigned_ids': reassigned_ids,
 			'completed_results': completed_results,
 			'completed_search_query': completed_search,
+			'debug_sro_ids': debug_sro_ids,
+			'debug_advocate': getattr(employee, 'name', str(employee)),
 		})
 	return render(request, 'cases/view_cases.html', context)
 
@@ -303,12 +350,14 @@ def advocate_cases_filtered(request, filter_type):
 		'quotation': ['quotation'],
 		'document_pending': ['document_pending'],
 		'sro_document_pending': ['sro_document_pending'],
-		'hold': ['on_hold'],
+		'hold': [],
 		'doc_hold': ['document_pending','sro_document_pending'],
 		'completed': ['positive','negative','positive_subject_tosearch'],
-		'hold_query_doc': ['on_hold','on_query','query','document_pending','sro_document_pending'],
+		'hold_query_doc': ['query','document_pending','sro_document_pending'],
 		'all': ['draft','quotation','pending_assignment','pending','document_pending','sro_document_pending','on_hold','on_query','query','positive','negative','positive_subject_tosearch']
 	}
+	# Remove deprecated statuses from 'all'
+	status_map['all'] = ['draft','quotation','pending_assignment','pending','document_pending','sro_document_pending','query','positive','negative','positive_subject_tosearch']
 	if filter_type in status_map:
 		qs = qs.filter(status__in=status_map[filter_type])
 		title = filter_type.replace('_',' ').title() + ' Cases'
@@ -385,11 +434,7 @@ def finalize_quotation(request, case_id):
 			case.quotation_finalized = True
 			case.status = 'pending'  # moves to pending since assigned advocate present
 			case.save()
-			# Ensure child cases mirror parent status
-			try:
-				case.propagate_status_to_children()
-			except Exception:
-				pass
+			# Child cases no longer auto-mirror parent status.
 			# Log finalize event
 			try:
 				adv = case.assigned_advocate.name if case.assigned_advocate else '-'
@@ -425,21 +470,17 @@ def assign_case_advocate(request, case_id):
 		form = CaseAssignmentForm(request.POST, instance=case)
 		if form.is_valid():
 			case = form.save(commit=False)
+			# Forward to advocate queue
 			case.status = 'pending'
 			case.save()
-			# Ensure child cases mirror parent status
-			try:
-				case.propagate_status_to_children()
-			except Exception:
-				pass
 			# Log assignment
 			try:
 				advocate_name = case.assigned_advocate.name if case.assigned_advocate else '-' 
-				CaseUpdate.objects.create(case=case, action='assigned', remark=f"Assigned to {advocate_name}")
+				CaseUpdate.objects.create(case=case, action='assigned', remark=f"Assigned to {advocate_name}; forwarded to advocate queue")
 			except Exception:
 				pass
-			messages.success(request, f"Case {case.case_number} assigned to {case.assigned_advocate.name}.")
-			return redirect('view_pending_cases')
+			messages.success(request, f"Case {case.case_number} assigned to {case.assigned_advocate.name} and forwarded to advocate.")
+			return redirect('case_detail', case_id=case.id)
 	else:
 		form = CaseAssignmentForm(instance=case)
 	return render(request, 'cases/assign_case_advocate.html', {'form': form, 'case': case})
@@ -466,6 +507,9 @@ def reassign_case_advocate(request, case_id):
 			case.assigned_advocate = new_adv
 			# Mark reassigned timestamp
 			case.reassigned_at = timezone.now()
+			# If awaiting assignment, move to advocate queue
+			if case.status == 'pending_assignment':
+				case.status = 'pending'
 			case.save()
 			# Always cascade to children
 			for child in case.child_cases.all():
@@ -481,7 +525,7 @@ def reassign_case_advocate(request, case_id):
 				CaseUpdate.objects.create(case=case, action='reassigned', remark=remark)
 			except Exception:
 				pass
-			messages.success(request, 'Advocate reassigned successfully.')
+			messages.success(request, 'Advocate reassigned and case forwarded to advocate queue (if awaiting assignment).')
 			return redirect('case_detail', case_id=case.id)
 	else:
 		form = ReassignCaseAdvocateForm(instance=case)
@@ -491,11 +535,7 @@ def reassign_case_advocate(request, case_id):
 @advocate_or_admin_required
 def case_detail(request, case_id):
 	case = get_object_or_404(Case, id=case_id)
-	
-	# If this is a child case, redirect to parent case detail
-	if case.parent_case:
-		messages.info(request, f"Viewing parent case. The requested case ({case.case_number}) is a linked property case shown below.")
-		return redirect('case_detail', case_id=case.parent_case.id)
+	# Child cases can now be viewed independently; no redirect
 	
 	if not check_case_access(request.user, case):
 		messages.error(request, "You don't have permission to view this case.")
@@ -514,28 +554,36 @@ def case_detail(request, case_id):
 	
 	# Fetch all updates for this case, ordered by update_date
 	updates = CaseUpdate.objects.filter(case=case).order_by('update_date')
-	# Split documents into receipt vs final. Prefer explicit flag; fallback to description hints for legacy rows.
+	# Split documents into receipt, final, and additional
 	docs = list(case.documents.all())
 	receipt_docs = []
 	final_docs = []
+	additional_docs = []
 	for d in docs:
 		if getattr(d, 'is_receipt', None) is True:
 			receipt_docs.append(d)
-		elif getattr(d, 'is_receipt', None) is False:
+		elif getattr(d, 'is_final', None) is True:
 			final_docs.append(d)
+		elif getattr(d, 'is_receipt', None) is False and getattr(d, 'is_final', None) is False:
+			additional_docs.append(d)
 		else:
+			# Legacy fallback
 			desc = (getattr(d, 'description', '') or '').lower()
 			if 'receipt' in desc:
 				receipt_docs.append(d)
 			else:
 				final_docs.append(d)
-	# Order lists: show latest receipt first; final docs chronological
+	# Order lists: show latest receipt first; final docs chronological; additional docs chronological
 	try:
 		receipt_docs.sort(key=lambda x: x.uploaded_at or 0, reverse=True)
 	except Exception:
 		pass
 	try:
 		final_docs.sort(key=lambda x: x.uploaded_at or 0)
+	except Exception:
+		pass
+	try:
+		additional_docs.sort(key=lambda x: x.uploaded_at or 0, reverse=True)
 	except Exception:
 		pass
 	# Compute top-level parent (root) for consistent child-add linking
@@ -575,6 +623,7 @@ def case_detail(request, case_id):
 		'root_case': root_case,
 		'receipt_docs': receipt_docs,
 		'final_docs': final_docs,
+		'additional_docs': additional_docs,
 		'details_complete': details_complete,
 		'is_finalized': is_finalized,
 		'is_active_quotation': is_active_quotation,
@@ -688,10 +737,10 @@ def add_case_work(request, case_id):
 def work_on_case(request, case_id):
 	case = get_object_or_404(Case, id=case_id)
 	
-	# If this is a child case, redirect to parent case
-	if case.parent_case:
-		messages.warning(request, f"Cannot work on child case directly. Redirecting to parent case.")
-		return redirect('work_on_case', case_id=case.parent_case.id)
+	# Query and draft cases must be reopened before working on them
+	if case.status in ['query', 'draft']:
+		messages.info(request, 'Case is in Query/Draft status. Please reopen the case first to continue working on it.')
+		return redirect('case_detail', case_id=case.id)
 	
 	# Lock editing if case finalized
 	if hasattr(case, 'is_final_status') and case.is_final_status():
@@ -865,11 +914,7 @@ def work_on_case(request, case_id):
 def case_action(request, case_id):
 	"""Handle case action workflow including finalization, additional property creation, and document upload."""
 	case = get_object_or_404(Case, id=case_id)
-	
-	# If this is a child case, redirect to parent case
-	if case.parent_case:
-		messages.warning(request, f"Cannot take action on child case directly. Redirecting to parent case.")
-		return redirect('case_action', case_id=case.parent_case.id)
+	# Allow actions on child cases (independent lifecycle)
 	
 	# Disallow taking action if the case is already finalized
 	if hasattr(case, 'is_final_status') and case.is_final_status():
@@ -912,39 +957,36 @@ def case_action(request, case_id):
 				if forward:
 					case.forwarded_to_sro = True
 			elif action == 'draft':
+				# Set status now so finalize page shows correct state; generate LRN if missing
 				case.status = 'draft'
 				case.forwarded_to_sro = False
 				case.completed_at = None
+				if not case.legal_reference_number:
+					case.generate_legal_reference_number()
+				case.save()
+				CaseUpdate.objects.create(case=case, action='draft', remark=remark)
+				return redirect('case_finalize_as_draft', case_id=case.id)
 			elif action == 'query':
+				# Set status now; generate LRN if missing so header can show it
 				case.status = 'query'
 				case.forwarded_to_sro = False
 				case.completed_at = None
+				if not case.legal_reference_number:
+					case.generate_legal_reference_number()
+				case.save()
+				CaseUpdate.objects.create(case=case, action='query', remark=remark)
+				return redirect('case_finalize_as_query', case_id=case.id)
 			else:
 				messages.error(request, 'Invalid action selected.')
 				return redirect('case_action', case_id=case.id)
 
 			case.save()
-			# If a child case was forwarded, ensure the root parent is also flagged for SRO when appropriate
-			if case.forwarded_to_sro:
-				root = case
-				while getattr(root, 'parent_case_id', None):
-					root = root.parent_case
-				# Only set forwarded flag on parent if it is in a final status
-				if root and root.parent_case is None and root.status in ['positive', 'positive_subject_tosearch', 'negative'] and not root.forwarded_to_sro:
-					root.forwarded_to_sro = True
-					root.save(update_fields=['forwarded_to_sro'])
-			# Ensure child cases mirror parent status
-			try:
-				case.propagate_status_to_children()
-			except Exception:
-				pass
+			# Do not auto-forward parent when a child is forwarded; forwarding is per-case
+			# Do not auto-mirror status to children; children are independent
 			CaseUpdate.objects.create(case=case, action=action, remark=remark)
 			messages.success(request, f'Case updated to {case.get_status_display()}')
-			# For final statuses, redirect to mandatory document upload step
+			# For final statuses, redirect to mandatory document upload step (individual upload only)
 			if case.status in ['positive', 'positive_subject_tosearch', 'negative']:
-				# If there are child cases, redirect to group upload so each case can upload its own document
-				if case.child_cases.exists():
-					return redirect('case_upload_documents_group', case_id=case.id)
 				return redirect('case_upload_document', case_id=case.id)
 			return redirect('case_detail', case_id=case.id)
 	else:
@@ -955,45 +997,15 @@ def case_action(request, case_id):
 
 @advocate_or_admin_required
 def case_put_on_hold(request, case_id):
-	"""Set a case to on_hold status from Actions sidebar. Requires POST to execute."""
-	case = get_object_or_404(Case, id=case_id)
-	if hasattr(case, 'is_final_status') and case.is_final_status():
-		messages.error(request, 'Finalized cases cannot be placed on hold.')
-		return redirect('case_detail', case_id=case.id)
-	# Only allow on-hold for early lifecycle statuses per policy
-	allowed_statuses = ['pending_assignment', 'pending', 'on_query', 'query']
-	if case.status not in allowed_statuses and case.status != 'on_hold':
-		messages.error(request, 'Putting on hold is only allowed before substantial work (Pending Assignment / Pending / On Query).')
-		return redirect('case_detail', case_id=case.id)
-	if case.status == 'on_hold':
-		messages.info(request, 'Case is already on hold.')
-		return redirect('case_detail', case_id=case.id)
-	if request.method == 'POST':
-		remark = request.POST.get('remark', '').strip() or 'Placed on hold from Actions sidebar.'
-		case.status = 'on_hold'
-		case.save(update_fields=['status'])
-		CaseUpdate.objects.create(case=case, action='on_hold', remark=remark)
-		messages.success(request, 'Case placed on hold.')
-	return redirect('case_detail', case_id=case.id)
+	"""Deprecated: On Hold feature removed."""
+	messages.info(request, 'On Hold status is no longer supported.')
+	return redirect('case_detail', case_id=case_id)
 
 
 @advocate_or_admin_required
 def case_upload_document(request, case_id):
 	"""Mandatory step after finalization to upload supporting document. Shows the LRN and enforces single-document policy."""
 	case = get_object_or_404(Case, id=case_id)
-	
-	# Allow child case uploads when coming from add_child_case flow (parent is finalized)
-	# Only redirect if trying to access independently (not from creation flow)
-	parent_case = None
-	if case.parent_case:
-		parent_case = case.parent_case
-		# Check if this is fresh from creation (has LRN but no document yet)
-		if case.legal_reference_number and not case.documents.exists():
-			# Allow upload for this child case
-			pass
-		else:
-			messages.warning(request, f"Cannot upload document for child case directly. Redirecting to parent case.")
-			return redirect('case_upload_document', case_id=case.parent_case.id)
 	
 	if not check_case_access(request.user, case):
 		messages.error(request, "You don't have permission to upload for this case.")
@@ -1011,8 +1023,8 @@ def case_upload_document(request, case_id):
 		if form.is_valid():
 			file = form.files['supporting_document']
 			desc = form.cleaned_data.get('document_description') or f"Final document for {case.get_status_display()}"
-			# Replace only prior final docs (non-receipt); preserve receipts
-			prior_finals = list(case.documents.filter(is_receipt=False))
+			# Replace only prior final docs; preserve receipts and additional docs
+			prior_finals = list(case.documents.filter(is_final=True))
 			if prior_finals:
 				for d in prior_finals:
 					try:
@@ -1029,7 +1041,8 @@ def case_upload_document(request, case_id):
 				file=file,
 				uploaded_by=getattr(request.user, 'employee', None) if request.user.is_authenticated else None,
 				description=desc,
-				is_receipt=False
+				is_receipt=False,
+				is_final=True
 			)
 			messages.success(request, 'Supporting document uploaded successfully.')
 			# If the case is not finalized yet (document pending), send advocate to action page to finalize now
@@ -1100,7 +1113,7 @@ def case_upload_documents_group(request, case_id):
 			})
 		# Save docs replacing only prior finals; keep receipts
 		for c, file, desc in to_create:
-			prior_finals = list(c.documents.filter(is_receipt=False))
+			prior_finals = list(c.documents.filter(is_final=True))
 			if prior_finals:
 				for d in prior_finals:
 					try:
@@ -1112,7 +1125,7 @@ def case_upload_documents_group(request, case_id):
 				CaseUpdate.objects.create(case=c, action='document_replaced', remark='Replaced after finalization (group upload).')
 			else:
 				CaseUpdate.objects.create(case=c, action='document_uploaded', remark='Uploaded after finalization (group upload).')
-			CaseDocument.objects.create(case=c, file=file, uploaded_by=uploader, description=desc, is_receipt=False)
+			CaseDocument.objects.create(case=c, file=file, uploaded_by=uploader, description=desc, is_receipt=False, is_final=True)
 		messages.success(request, 'All documents uploaded successfully.')
 		return redirect('post_finalize_options', case_id=parent.id)
 
@@ -1169,9 +1182,20 @@ def case_finalize_with_document(request, case_id):
 		messages.info(request, 'Final document can be uploaded only when the case is document pending.')
 		return redirect('case_detail', case_id=case.id)
 
-	children = list(case.child_cases.all())
+	# Do not combine child-case uploads here; each case finalizes independently
+	children = []
 	if request.method == 'POST':
 		form = FinalizeWithDocumentForm(request.POST, request.FILES)
+		# Finalization after SRO receipt: allow only final statuses
+		try:
+			form.fields['status'].required = True
+			form.fields['status'].choices = [
+				('positive','Positive'),
+				('negative','Negative'),
+				('positive_subject_tosearch','Positive Subject to Search'),
+			]
+		except Exception:
+			pass
 		if form.is_valid():
 			# Save/replace final document (keep receipts)
 			file = form.files['supporting_document']
@@ -1190,91 +1214,184 @@ def case_finalize_with_document(request, case_id):
 				file=file,
 				uploaded_by=getattr(request.user, 'employee', None) if request.user.is_authenticated else None,
 				description=desc,
-				is_receipt=False
+				is_receipt=False,
+				is_final=True,
 			)
 			# Set final status and housekeeping
 			new_status = form.cleaned_data['status']
 			case.status = new_status
 			case.completed_at = timezone.now()
+			# Auto-forward if PSTS
+			if new_status == 'positive_subject_tosearch':
+				case.forwarded_to_sro = True
+			if not case.legal_reference_number:
+				case.generate_legal_reference_number()
+			case.save()
+			# Child-case uploads removed to keep lifecycles independent
+			# Record update
+			try:
+				CaseUpdate.objects.create(case=case, action=new_status, remark=form.cleaned_data.get('remark') or 'Finalized with document upload')
+			except Exception:
+				pass
+			messages.success(request, 'Final document uploaded and status updated.')
+			return redirect('case_detail', case_id=case.id)
+	else:
+		form = FinalizeWithDocumentForm()
+		try:
+			form.fields['status'].required = True
+			form.fields['status'].choices = [
+				('positive','Positive'),
+				('negative','Negative'),
+				('positive_subject_tosearch','Positive Subject to Search'),
+			]
+		except Exception:
+			pass
+	return render(request, 'cases/finalize_with_document.html', {'form': form, 'case': case, 'children': children})
+
+
+@advocate_or_admin_required
+def case_finalize_as_draft(request, case_id):
+	"""Upload a document and set status to Draft. Generates LRN if missing, does not mark completed_at.
+	Can be used multiple times; LRN is preserved once set."""
+	case = get_object_or_404(Case, id=case_id)
+	if not check_case_access(request.user, case):
+		messages.error(request, "You don't have permission to update this case.")
+		return redirect('view_cases')
+
+	if request.method == 'POST':
+		form = FinalizeWithDocumentForm(request.POST, request.FILES)
+		# Make status optional and constrain to Draft in this flow
+		try:
+			form.fields['status'].required = False
+			form.fields['status'].choices = [('draft','Draft')]
+		except Exception:
+			pass
+		if form.is_valid():
+			file = form.files['supporting_document']
+			desc = form.cleaned_data.get('document_description') or f"Draft document for {case.case_number}"
+			for d in list(case.documents.filter(is_receipt=False)):
+				try:
+					if d.file:
+						d.file.delete(save=False)
+				except Exception:
+					pass
+				d.delete()
+			CaseDocument.objects.create(
+				case=case,
+				file=file,
+				uploaded_by=getattr(request.user, 'employee', None) if request.user.is_authenticated else None,
+				description=desc,
+				is_receipt=False
+			)
+			case.status = 'draft'
+			# Do not set completed_at for draft
+			if not case.legal_reference_number:
+				case.generate_legal_reference_number()
+			case.save()
+
+			try:
+				CaseUpdate.objects.create(case=case, action='draft', remark=form.cleaned_data.get('remark') or 'Marked Draft with document upload')
+			except Exception:
+				pass
+			messages.success(request, 'Draft saved with document. LRN preserved. You can now add additional property cases.')
+			# If this is a child case, redirect to add more child cases to its parent
+			if case.parent_case:
+				return redirect('add_child_case', case_id=case.parent_case.id)
+			return redirect('add_child_case', case_id=case.id)
+	else:
+		form = FinalizeWithDocumentForm()
+		try:
+			form.fields['status'].required = False
+			form.fields['status'].choices = [('draft','Draft')]
+		except Exception:
+			pass
+	return render(request, 'cases/finalize_with_document.html', {'form': form, 'case': case, 'force_status': 'draft'})
+
+
+@advocate_or_admin_required
+def case_finalize_as_query(request, case_id):
+	"""Upload a document and set status to Query. Generates LRN if missing, does not mark completed_at.
+	Can be reopened later; LRN is preserved."""
+	case = get_object_or_404(Case, id=case_id)
+	if not check_case_access(request.user, case):
+		messages.error(request, "You don't have permission to update this case.")
+		return redirect('view_cases')
+
+	if request.method == 'POST':
+		form = FinalizeWithDocumentForm(request.POST, request.FILES)
+		# Make status optional and constrain to Query in this flow
+		try:
+			form.fields['status'].required = False
+			form.fields['status'].choices = [('query','Query')]
+		except Exception:
+			pass
+		if form.is_valid():
+			file = form.files['supporting_document']
+			desc = form.cleaned_data.get('document_description') or f"Query document for {case.case_number}"
+			for d in list(case.documents.filter(is_final=True)):
+				try:
+					if d.file:
+						d.file.delete(save=False)
+				except Exception:
+					pass
+				d.delete()
+			CaseDocument.objects.create(
+				case=case,
+				file=file,
+				uploaded_by=getattr(request.user, 'employee', None) if request.user.is_authenticated else None,
+				description=desc,
+				is_receipt=False,
+				is_final=True
+			)
+			case.status = 'query'
+			# Do not set completed_at for query
 			if not case.legal_reference_number:
 				try:
 					case.generate_legal_reference_number()
 				except Exception:
 					pass
 			case.save()
-			# Handle children uploads and optional finalization
-			finalized_children = 0
-			pending_children = 0
-			for child in children:
-				cfile = request.FILES.get(f'child_doc_{child.id}')
-				cdesc = request.POST.get(f'child_desc_{child.id}') or f"Final document for {child.case_number}"
-				if cfile:
-					# Replace prior final docs for child and attach new
-					for d in list(child.documents.filter(is_receipt=False)):
-						try:
-							if d.file:
-								d.file.delete(save=False)
-						except Exception:
-							pass
-						d.delete()
-					CaseDocument.objects.create(
-						case=child,
-						file=cfile,
-						uploaded_by=getattr(request.user, 'employee', None) if request.user.is_authenticated else None,
-						description=cdesc,
-						is_receipt=False
-					)
-					# Finalize child with same status
-					child.status = new_status
-					child.completed_at = timezone.now()
-					if not child.legal_reference_number:
-						try:
-							child.generate_legal_reference_number()
-						except Exception:
-							pass
-					child.save()
-					try:
-						CaseUpdate.objects.create(case=child, action=new_status, remark='Finalized with document upload (child)')
-					except Exception:
-						pass
-					finalized_children += 1
-				else:
-					# If child already has a final document, allow status sync; else leave pending
-					has_final = child.documents.filter(is_receipt=False).exists()
-					if has_final:
-						if child.status != new_status:
-							child.status = new_status
-						if not child.completed_at:
-							child.completed_at = timezone.now()
-						if not child.legal_reference_number:
-							try:
-								child.generate_legal_reference_number()
-							except Exception:
-								pass
-						child.save()
-						try:
-							CaseUpdate.objects.create(case=child, action=new_status, remark='Finalized (no new document)')
-						except Exception:
-							pass
-						finalized_children += 1
-					else:
-						pending_children += 1
-			# Record update
+
 			try:
-				CaseUpdate.objects.create(case=case, action=new_status, remark=form.cleaned_data.get('remark') or 'Finalized with document upload')
+				CaseUpdate.objects.create(case=case, action='query', remark=form.cleaned_data.get('remark') or 'Marked Query with document upload')
 			except Exception:
 				pass
-			if children:
-				if pending_children:
-					messages.success(request, f'Final document uploaded and status updated. Children finalized: {finalized_children}. Remaining without document: {pending_children}.')
-				else:
-					messages.success(request, f'Final document uploaded and status updated for parent and {finalized_children} child(ren).')
-			else:
-				messages.success(request, 'Final document uploaded and status updated.')
-			return redirect('case_detail', case_id=case.id)
+			messages.success(request, 'Query saved with document. LRN preserved. You can now add additional property cases.')
+			# If this is a child case, redirect to add more child cases to its parent
+			if case.parent_case:
+				return redirect('add_child_case', case_id=case.parent_case.id)
+			return redirect('add_child_case', case_id=case.id)
 	else:
 		form = FinalizeWithDocumentForm()
-	return render(request, 'cases/finalize_with_document.html', {'form': form, 'case': case, 'children': children})
+		try:
+			form.fields['status'].required = False
+			form.fields['status'].choices = [('query','Query')]
+		except Exception:
+			pass
+	return render(request, 'cases/finalize_with_document.html', {'form': form, 'case': case, 'force_status': 'query'})
+
+
+@advocate_or_admin_required
+def case_reopen(request, case_id):
+	"""Allow advocate or admin to reopen a Draft or Query case back to Pending without changing LRN."""
+	case = get_object_or_404(Case, id=case_id)
+	if not check_case_access(request.user, case):
+		messages.error(request, "You don't have permission to update this case.")
+		return redirect('view_cases')
+	if case.status not in ['draft', 'query']:
+		messages.info(request, 'Only draft or query cases can be reopened.')
+		return redirect('case_detail', case_id=case.id)
+
+	case.status = 'pending'
+	# Keep existing LRN; clear completed_at if it was set
+	case.completed_at = None
+	case.save()
+	try:
+		CaseUpdate.objects.create(case=case, action='pending', remark='Reopened for further work')
+	except Exception:
+		pass
+	messages.success(request, 'Case reopened. LRN unchanged.')
+	return redirect('case_detail', case_id=case.id)
 
 
 @admin_required
@@ -1326,7 +1443,7 @@ def add_child_case(request, case_id):
 		messages.error(request, "You don't have permission to add a child case.")
 		return redirect('view_cases')
 	if request.method == 'POST':
-		form = ChildCaseForm(request.POST, parent_case=parent)
+		form = ChildCaseForm(request.POST, request.FILES, parent_case=parent)
 		if form.is_valid():
 			addr = form.cleaned_data.get('property_address')
 			state = form.cleaned_data.get('state') or parent.state
@@ -1335,12 +1452,12 @@ def add_child_case(request, case_id):
 			branch = form.cleaned_data.get('branch') or parent.branch
 			new_case = Case(
 				applicant_name=parent.applicant_name,
-				case_number=f"{parent.case_number}-{parent.child_cases.count()+1}",
+				case_number=f"{parent.case_number}-{parent.child_cases.count()+2}",
 				bank=parent.bank,
 				case_type=parent.case_type,
 				documents_present=parent.documents_present,
-				# Inherit status from parent as requested
-				status=parent.status,
+				# Child cases start independently (do not inherit parent's status)
+				status='pending',
 				property_address=addr,
 				state=state,
 				district=district,
@@ -1349,28 +1466,85 @@ def add_child_case(request, case_id):
 				assigned_advocate=parent.assigned_advocate,
 				parent_case=parent,
 			)
-			# Mirror SRO forwarding flag from parent (useful when adding after finalization)
-			new_case.forwarded_to_sro = parent.forwarded_to_sro
+			# Child forwarding is independent; do not auto-forward
+			new_case.forwarded_to_sro = False
 			new_case.save()
-			# If parent is already finalized, generate LRN now and prompt upload on the child
-			final_statuses = ['positive', 'positive_subject_tosearch', 'negative']
-			if parent.status in final_statuses:
-				new_case.generate_legal_reference_number(); new_case.save()
+			# Apply selected status and optional document
+			sel_status = (form.cleaned_data.get('initial_status') or '').strip() or 'pending'
+			file = request.FILES.get('supporting_document')
+			desc = form.cleaned_data.get('document_description') or f"Initial document for {new_case.case_number}"
+			# If a document is being uploaded, ensure LRN exists before saving the file
+			if file and not new_case.legal_reference_number:
+				new_case.generate_legal_reference_number()
+				new_case.save()
+			if sel_status and sel_status != 'pending':
+				new_case.status = sel_status
+				if sel_status in ['draft','query']:
+					if not new_case.legal_reference_number:
+						new_case.generate_legal_reference_number()
+					# Do not set completed_at for draft/query
+					new_case.completed_at = None
+					new_case.save()
+					if file:
+						CaseDocument.objects.create(case=new_case, file=file, uploaded_by=getattr(request.user, 'employee', None) if request.user.is_authenticated else None, description=desc, is_receipt=False)
+					else:
+						# Redirect to appropriate finalize page so user can upload document and continue workflow
+						messages.success(request, f'Child case {new_case.case_number} set to {new_case.get_status_display()}. LRN: {new_case.legal_reference_number}. Please upload the document.')
+						if sel_status == 'query':
+							return redirect('case_finalize_as_query', case_id=new_case.id)
+						else:  # draft
+							return redirect('case_finalize_as_draft', case_id=new_case.id)
+						return redirect('case_upload_document', case_id=new_case.id)
+					try:
+						CaseUpdate.objects.create(case=new_case, action=sel_status, remark='Child created with status and initial document')
+					except Exception:
+						pass
+				elif sel_status in ['positive','negative','positive_subject_tosearch']:
+					new_case.completed_at = timezone.now()
+					if not new_case.legal_reference_number:
+						new_case.generate_legal_reference_number()
+					new_case.save()
+					if file:
+						CaseDocument.objects.create(case=new_case, file=file, uploaded_by=getattr(request.user, 'employee', None) if request.user.is_authenticated else None, description=desc, is_receipt=False)
+					else:
+						messages.success(request, f'Child case {new_case.case_number} finalized as {new_case.get_status_display()}. LRN: {new_case.legal_reference_number}. Please upload the final document.')
+						return redirect('case_upload_document', case_id=new_case.id)
+					try:
+						CaseUpdate.objects.create(case=new_case, action=sel_status, remark='Child finalized at creation')
+					except Exception:
+						pass
+				else:
+					# Non-final intermediate statuses (pending, on_query, document_pending, etc.)
+					new_case.completed_at = None
+					new_case.save()
+					if file:
+						CaseDocument.objects.create(case=new_case, file=file, uploaded_by=getattr(request.user, 'employee', None) if request.user.is_authenticated else None, description=desc, is_receipt=False)
+					else:
+						messages.success(request, f'Child case {new_case.case_number} set to {new_case.get_status_display()}. LRN: {new_case.legal_reference_number or "—"}.')
+					try:
+						CaseUpdate.objects.create(case=new_case, action=sel_status, remark='Child status set at creation')
+					except Exception:
+						pass
+			# LRN is generated when the child is finalized or set to Draft/Query, not at creation
 			try:
 				CaseUpdate.objects.create(case=parent, action='child_created', remark=f"Created child {new_case.case_number} -> {new_case.legal_reference_number or '-'}")
 			except Exception:
 				pass
-			# If finalized, redirect to upload document for this child case
-			if parent.status in final_statuses:
-				messages.success(request, f'Child case {new_case.case_number} created with LRN {new_case.legal_reference_number}. Please upload the document.')
-				return redirect('case_upload_document', case_id=new_case.id)
-			else:
-				# Not finalized yet, stay on add child page
-				messages.success(request, f'Child case {new_case.case_number} created. You can add another linked property.')
-				return redirect('add_child_case', case_id=parent.id)
+			# After creation, stay on add child page to add more
+			lrntag = f" • LRN: {new_case.legal_reference_number}" if new_case.legal_reference_number else ""
+			messages.success(request, f'Child case {new_case.case_number} created. Status: {new_case.get_status_display()}{lrntag}.')
+			return redirect(f"/cases/add-child-case/{parent.id}/?last_child_id={new_case.id}")
 	else:
 		form = ChildCaseForm(parent_case=parent)
-	return render(request, 'cases/add_child_case.html', {'form': form, 'parent': parent})
+	# If redirected after create, show the last created child summary
+	last_child = None
+	try:
+		cid = request.GET.get('last_child_id')
+		if cid:
+			last_child = Case.objects.filter(pk=int(cid), parent_case=parent).first()
+	except Exception:
+		last_child = None
+	return render(request, 'cases/add_child_case.html', {'form': form, 'parent': parent, 'last_child': last_child})
 
 
 # =========================
@@ -1609,12 +1783,20 @@ def locations_tehsil_delete(request, pk):
 # =========================
 @sro_or_admin_required
 def sro_dashboard(request):
-	"""List cases forwarded to SRO that are either Positive Subject to Search or Negative."""
+	"""List SRO cases independently (parents and children), only when eligible.
+
+	Eligibility:
+	- Status is one of ['positive_subject_tosearch', 'positive', 'negative'] AND
+	  (auto-forward for positive_subject_tosearch) OR explicitly forwarded_to_sro=True.
+
+	Entries are independent (no parent binding) and include child cases.
+	"""
 	search = request.GET.get('search', '').strip()
+	# Independent listing: include parents and children; do not bind children to parent rows
+	eligible_statuses = ['positive_subject_tosearch', 'negative', 'positive']
 	qs = Case.objects.filter(
-		parent_case__isnull=True,
-		forwarded_to_sro=True,
-		status__in=['positive_subject_tosearch', 'negative', 'positive']
+		Q(forwarded_to_sro=True) | Q(status='positive_subject_tosearch'),
+		status__in=eligible_statuses
 	).select_related('bank','case_type','assigned_advocate').order_by('-updated_at')
 	# Apply SRO scoping
 	user_emp = getattr(request.user, 'employee', None)
@@ -1629,10 +1811,9 @@ def sro_dashboard(request):
 			conds |= Q(district__in=district_names)
 		if tehsil_names:
 			conds |= Q(tehsil__in=tehsil_names)
+		# If no scopes are configured, allow all cases (do not zero out)
 		if conds:
 			qs = qs.filter(conds)
-		else:
-			qs = qs.none()
 	if search:
 		qs = qs.filter(
 			Q(applicant_name__icontains=search) |
@@ -1663,8 +1844,12 @@ def sro_update_case(request, case_id):
 		if not allowed:
 			messages.error(request, 'You do not have rights to update this case.')
 			return redirect('dashboard')
-	if not case.forwarded_to_sro or case.status not in ['positive_subject_tosearch', 'negative', 'positive']:
+	# Eligibility: allow PSTS regardless of forwarded flag; for Positive/Negative require explicit forwarding
+	if case.status not in ['positive_subject_tosearch', 'negative', 'positive']:
 		messages.error(request, 'This case is not eligible for SRO update.')
+		return redirect('dashboard')
+	if case.status in ['positive','negative'] and not case.forwarded_to_sro:
+		messages.error(request, 'This Positive/Negative case was not forwarded to SRO.')
 		return redirect('dashboard')
 
 	if request.method == 'POST':
@@ -1701,11 +1886,7 @@ def sro_update_case(request, case_id):
 			case.forwarded_to_sro = False
 			case.completed_at = None
 			case.save()
-			# Ensure child cases mirror parent status
-			try:
-				case.propagate_status_to_children()
-			except Exception:
-				pass
+			# Do not mirror status to children; children remain independent
 			CaseUpdate.objects.create(case=case, action='sro_update', remark=f"SRO uploaded receipt; sent back to advocate. Amount={case.receipt_amount} | ReceiptNo={case.receipt_number or '-'}")
 			messages.success(request, 'Receipt uploaded. Case returned to Advocate for document upload.')
 			return redirect('dashboard')
@@ -1812,6 +1993,122 @@ def sro_update_group(request, case_id):
 		'children': children,
 		'errors': {},
 	})
+
+
+# =========================
+# ADDITIONAL DOCUMENTS (non-final)
+# =========================
+@advocate_or_admin_required
+def case_add_document(request, case_id):
+	"""Upload one or more additional documents for a case. These are non-final and non-receipt."""
+	case = get_object_or_404(Case, id=case_id)
+	if not check_case_access(request.user, case):
+		messages.error(request, "You don't have permission to upload for this case.")
+		return redirect('view_cases')
+
+	if request.method == 'POST':
+		files = request.FILES.getlist('documents')
+		# Get descriptions as a list matching the file order
+		desc_list = request.POST.getlist('descriptions')
+
+		uploader = getattr(request.user, 'employee', None) if request.user.is_authenticated else None
+		created = 0
+		allowed = [
+			'application/pdf',
+			'image/jpeg','image/png','image/gif','image/webp',
+			'application/msword',
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+		]
+		for idx, f in enumerate(files):
+			if not f:
+				continue
+			if hasattr(f, 'size') and f.size > 5 * 1024 * 1024:
+				messages.error(request, 'One of the files is too large (max 5MB).')
+				return redirect('case_detail', case_id=case.id)
+			if hasattr(f, 'content_type') and f.content_type not in allowed:
+				messages.error(request, 'Unsupported file type found. Upload PDF, DOC/DOCX, or image.')
+				return redirect('case_detail', case_id=case.id)
+			desc = ''
+			if idx < len(desc_list):
+				desc = desc_list[idx]
+			CaseDocument.objects.create(
+				case=case,
+				file=f,
+				uploaded_by=uploader,
+				description=desc,
+				is_receipt=False,
+				is_final=False,
+			)
+			created += 1
+		if created:
+			messages.success(request, f'Added {created} additional document(s).')
+		else:
+			messages.info(request, 'No documents were uploaded.')
+		return redirect('case_detail', case_id=case.id)
+
+	return render(request, 'cases/case_add_document.html', {'case': case})
+
+
+@advocate_or_admin_required
+def case_replace_final_document(request, case_id):
+	"""Replace the final document of a case."""
+	case = get_object_or_404(Case, id=case_id)
+	if not check_case_access(request.user, case):
+		messages.error(request, "You don't have permission to modify this case.")
+		return redirect('view_cases')
+	
+	# Get current final document
+	final_doc = case.documents.filter(is_final=True).first()
+	
+	if request.method == 'POST':
+		new_file = request.FILES.get('final_document')
+		description = request.POST.get('description', '').strip()
+		
+		if not new_file:
+			messages.error(request, 'Please select a file to upload.')
+			return render(request, 'cases/case_replace_final_document.html', {'case': case, 'final_doc': final_doc})
+		
+		# Validate file
+		allowed = [
+			'application/pdf',
+			'image/jpeg','image/png','image/gif','image/webp',
+			'application/msword',
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+		]
+		if hasattr(new_file, 'size') and new_file.size > 10 * 1024 * 1024:
+			messages.error(request, 'File is too large (max 10MB).')
+			return render(request, 'cases/case_replace_final_document.html', {'case': case, 'final_doc': final_doc})
+		if hasattr(new_file, 'content_type') and new_file.content_type not in allowed:
+			messages.error(request, 'Unsupported file type. Upload PDF, DOC/DOCX, or image.')
+			return render(request, 'cases/case_replace_final_document.html', {'case': case, 'final_doc': final_doc})
+		
+		# Delete old final document file and record
+		if final_doc:
+			try:
+				if final_doc.file:
+					final_doc.file.delete(save=False)
+			except Exception:
+				pass
+			final_doc.delete()
+		
+		# Create new final document
+		uploader = getattr(request.user, 'employee', None) if request.user.is_authenticated else None
+		if not description:
+			description = f"Final document for {case.case_number}"
+		
+		CaseDocument.objects.create(
+			case=case,
+			file=new_file,
+			uploaded_by=uploader,
+			description=description,
+			is_receipt=False,
+			is_final=True,
+		)
+		
+		messages.success(request, 'Final document has been replaced successfully.')
+		return redirect('case_detail', case_id=case.id)
+	
+	return render(request, 'cases/case_replace_final_document.html', {'case': case, 'final_doc': final_doc})
 
 
 # =========================

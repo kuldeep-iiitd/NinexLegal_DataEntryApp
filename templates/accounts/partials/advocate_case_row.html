@@ -28,8 +28,12 @@
   </div>
   <div class="flex flex-col items-end space-y-1">
     <a href="{% url 'case_detail' case.id %}" class="text-indigo-600 text-xs hover:underline">Detail</a>
-    {% if case.status not in 'positive negative' and case.assigned_advocate %}
-      <a href="{% url 'work_on_case' case.id %}" class="text-blue-600 text-xs hover:underline">Work</a>
+    {% if case.assigned_advocate and case.status != 'positive' and case.status != 'negative' %}
+      {% if case.status == 'query' %}
+        <span class="text-yellow-600 text-[11px]">Reopen to work</span>
+      {% else %}
+        <a href="{% url 'work_on_case' case.id %}" class="text-blue-600 text-xs hover:underline">Work</a>
+      {% endif %}
     {% endif %}
     {% if case.status == 'pending_assignment' %}
       <a href="{% url 'reassign_case_advocate' case.id %}" class="text-amber-700 text-xs hover:underline">Reassign</a>

@@ -228,7 +228,11 @@ function addAddressField(){
     const data = await fetchJSON(`/cases/api/locations/tehsils/?${params.toString()}`);
     (data.results||[]).forEach(item=>{
       const name = item.label.split(' (')[0];
-      const opt = document.createElement('option'); opt.value = name; opt.textContent = name; tehsilSel.appendChild(opt);
+      const opt = document.createElement('option');
+      // Store just the tehsil name in value, but show full label
+      opt.value = name;
+      opt.textContent = item.label;
+      tehsilSel.appendChild(opt);
     });
   }
 

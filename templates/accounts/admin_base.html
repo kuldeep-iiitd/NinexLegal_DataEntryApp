@@ -163,7 +163,7 @@
           <img src="{% static 'images/logo.png' %}" alt="NinexLegal" class="h-12 w-12 rounded-xl shadow-lg object-cover transition-opacity group-hover:opacity-90">
           <div class="no-underline">
             <div class="font-bold text-xl text-white">NinexLegal Admin</div>
-            <div class="text-xs text-white/80">Property Management System</div>
+            <div class="text-xs text-white/80">Value your Trust</div>
           </div>
         </a>
         <div class="flex items-center gap-6">
@@ -237,7 +237,10 @@
             </a>
           </div>
           <div>
-            <div class="sidebar-section-title">Locations</div>
+            <div class="sidebar-section-title">More Options</div>
+            <a href="{% url 'super_sro_dashboard' %}" class="sidebar-link">
+              <i class="fas fa-file-signature"></i><span>SRO Dashboard</span>
+            </a>
             <a href="{% url 'locations_states_list' %}" class="sidebar-link">
               <i class="fas fa-map-marked-alt"></i><span>States</span>
             </a>

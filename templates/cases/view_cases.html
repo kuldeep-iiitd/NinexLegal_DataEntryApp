@@ -62,13 +62,13 @@
                             </button>
                         </form>
                     {% else %}
-                        <!-- Advocate: completed cases are not listed; provide a dedicated search -->
+                        <!-- Advocate: search all assigned cases -->
                         <form method="get" action="" class="flex items-center gap-2 w-full sm:w-auto">
-                            <input type="text" name="completed_search" value="{{ completed_search_query|default:'' }}" 
-                                   placeholder="Search completed cases..." 
+                            <input type="text" name="search" value="{{ search_query|default:'' }}" 
+                                   placeholder="Search by applicant, case number, LRN..." 
                                    class="px-4 py-2 border border-white/30 bg-white/20 text-white placeholder-white/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50 w-full sm:w-80" />
                             <button type="submit" class="px-6 py-2 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition whitespace-nowrap">
-                                <i class="fas fa-search mr-2"></i>Search Completed
+                                <i class="fas fa-search mr-2"></i>Search
                             </button>
                         </form>
                     {% endif %}
@@ -87,6 +87,7 @@
                             <div class="px-4 py-3 bg-gray-700 text-white font-semibold flex items-center space-x-2">
                                 <i class="fas fa-file-invoice-dollar"></i>
                                 <span>Quotation Cases</span>
+                                <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.quotation|default:0 }}</span>
                             </div>
                             <div class="divide-y divide-white/10">
                                 {% for c in cases %}
@@ -114,6 +115,7 @@
                             <div class="px-4 py-3 bg-orange-600 text-white font-semibold flex items-center space-x-2">
                                 <i class="fas fa-user-clock"></i>
                                 <span>Pending Assignment Cases</span>
+                                <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.pending_assignment|default:0 }}</span>
                             </div>
                             <div class="divide-y divide-white/10">
                                 {% for c in cases %}
@@ -149,6 +151,11 @@
                         <div class="px-4 py-3 {% if is_admin %}bg-blue-600{% else %}bg-blue-600{% endif %} text-white font-semibold flex items-center space-x-2">
                             <i class="fas fa-clock"></i>
                             <span>Pending Cases</span>
+                            {% if is_admin %}
+                                <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.pending|default:0 }}</span>
+                            {% else %}
+                                <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ pending_today|length|add:pending_overall|length }}</span>
+                            {% endif %}
                         </div>
                         <div class="divide-y {% if is_admin %}divide-white/20{% else %}divide-white/20{% endif %}">
                             {% if is_admin %}
@@ -156,13 +163,19 @@
                                     {% if c.status == 'pending' %}
                                         <div class="p-4 flex items-center justify-between hover:bg-white/10 transition">
                                             <div>
-                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}</p>
+                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                    {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+                                                </p>
                                                 <p class="text-xs text-gray-200">{{ c.applicant_name }}</p>
                                             </div>
                                             <div class="flex space-x-2">
                                                 <a href="{% url 'case_detail' c.id %}" class="text-blue-300 hover:text-blue-200 text-xs underline">Detail</a>
                                                 {% if c.assigned_advocate %}
-                                                    <a href="{% url 'work_on_case' c.id %}" class="text-cyan-300 hover:text-cyan-200 text-xs underline">Work</a>
+                                                    {% if c.status == 'query' %}
+                                                        <span class="text-yellow-300 text-xs">Reopen to work</span>
+                                                    {% else %}
+                                                        <a href="{% url 'work_on_case' c.id %}" class="text-cyan-300 hover:text-cyan-200 text-xs underline">Work</a>
+                                                    {% endif %}
                                                     <a href="{% url 'case_action' c.id %}" class="text-green-300 hover:text-green-200 text-xs underline">Action</a>
                                                 {% endif %}
                                                 {% if is_admin %}
@@ -183,6 +196,7 @@
                                         <div class="p-4 flex items-center justify-between hover:bg-white/5 transition">
                                             <div>
                                                 <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                    {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
                                                     {% if reassigned_ids and c.id in reassigned_ids %}
                                                         <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/80 text-white">Reassigned</span>
                                                     {% endif %}
@@ -191,7 +205,11 @@
                                             </div>
                                             <div class="flex space-x-2">
                                                 <a href="{% url 'case_detail' c.id %}" class="text-blue-300 hover:text-blue-200 text-xs underline">Detail</a>
+                                                {% if c.status == 'query' %}
+                                                <span class="text-yellow-300 text-xs">Reopen to work</span>
+                                                {% else %}
                                                 <a href="{% url 'work_on_case' c.id %}" class="text-cyan-300 hover:text-cyan-200 text-xs underline">Work</a>
+                                                {% endif %}
                                                 <a href="{% url 'case_action' c.id %}" class="text-green-300 hover:text-green-200 text-xs underline">Action</a>
                                             </div>
                                         </div>
@@ -206,6 +224,7 @@
                                         <div class="p-4 flex items-center justify-between hover:bg-white/5 transition">
                                             <div>
                                                 <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                    {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
                                                     {% if reassigned_ids and c.id in reassigned_ids %}
                                                         <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/80 text-white">Reassigned</span>
                                                     {% endif %}
@@ -214,7 +233,11 @@
                                             </div>
                                             <div class="flex space-x-2">
                                                 <a href="{% url 'case_detail' c.id %}" class="text-blue-300 hover:text-blue-200 text-xs underline">Detail</a>
+                                                {% if c.status == 'query' %}
+                                                <span class="text-yellow-300 text-xs">Reopen to work</span>
+                                                {% else %}
                                                 <a href="{% url 'work_on_case' c.id %}" class="text-cyan-300 hover:text-cyan-200 text-xs underline">Work</a>
+                                                {% endif %}
                                                 <a href="{% url 'case_action' c.id %}" class="text-green-300 hover:text-green-200 text-xs underline">Action</a>
                                             </div>
                                         </div>
@@ -233,19 +256,26 @@
                             <div class="px-4 py-3 bg-amber-600 text-white font-semibold flex items-center space-x-2">
                                 <i class="fas fa-pencil-alt"></i>
                                 <span>Draft</span>
+                                <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.draft|default:0 }}</span>
                             </div>
                             <div class="divide-y divide-white/10">
                                 {% for c in cases %}
                                     {% if c.status == 'draft' %}
                                         <div class="p-4 flex items-center justify-between hover:bg-white/10 transition">
                                             <div>
-                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}</p>
+                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                    {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+                                                </p>
                                                 <p class="text-xs text-gray-200">{{ c.applicant_name }}</p>
                                             </div>
                                             <div class="flex space-x-2">
                                                 <a href="{% url 'case_detail' c.id %}" class="text-blue-200 hover:text-blue-100 text-xs underline font-medium">Detail</a>
                                                 {% if c.assigned_advocate %}
+                                                    {% if c.status == 'query' %}
+                                                    <span class="text-yellow-200 text-xs font-medium">Reopen to work</span>
+                                                    {% else %}
                                                     <a href="{% url 'work_on_case' c.id %}" class="text-cyan-200 hover:text-cyan-100 text-xs underline font-medium">Work</a>
+                                                    {% endif %}
                                                     <a href="{% url 'case_action' c.id %}" class="text-green-200 hover:text-green-100 text-xs underline font-medium">Action</a>
                                                 {% endif %}
                                                 {% if is_admin %}
@@ -260,25 +290,28 @@
                                 {% endif %}
                             </div>
                         </div>
-                        {# Reassigned Work folded into Pending with a badge #}
-                        <!-- On Hold Section -->
+
+                        <!-- Query Section -->
                         <div class="bg-white/20 backdrop-blur-md border-white/30 rounded-2xl shadow-xl overflow-hidden border">
-                            <div class="px-4 py-3 {% if is_admin %}bg-blue-600{% else %}bg-blue-600{% endif %} text-white font-semibold flex items-center space-x-2">
-                                <i class="fas fa-pause-circle"></i>
-                                <span>On Hold</span>
+                            <div class="px-4 py-3 bg-yellow-600 text-white font-semibold flex items-center space-x-2">
+                                <i class="fas fa-question-circle"></i>
+                                <span>Query</span>
+                                <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.query|default:0 }}</span>
                             </div>
                             <div class="divide-y divide-white/10">
                                 {% for c in cases %}
-                                    {% if c.status == 'on_hold' %}
+                                    {% if c.status == 'query' %}
                                         <div class="p-4 flex items-center justify-between hover:bg-white/10 transition">
                                             <div>
-                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}</p>
-                                                <p class="text-xs {% if is_admin %}text-gray-200{% else %}text-gray-200{% endif %}">{{ c.applicant_name }}</p>
+                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                    {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+                                                </p>
+                                                <p class="text-xs text-gray-200">{{ c.applicant_name }}</p>
                                             </div>
                                             <div class="flex space-x-2">
                                                 <a href="{% url 'case_detail' c.id %}" class="text-blue-200 hover:text-blue-100 text-xs underline font-medium">Detail</a>
                                                 {% if c.assigned_advocate %}
-                                                    <a href="{% url 'work_on_case' c.id %}" class="text-cyan-200 hover:text-cyan-100 text-xs underline font-medium">Work</a>
+                                                    <span class="text-yellow-200 text-xs font-medium">Reopen to work</span>
                                                     <a href="{% url 'case_action' c.id %}" class="text-green-200 hover:text-green-100 text-xs underline font-medium">Action</a>
                                                 {% endif %}
                                                 {% if is_admin %}
@@ -288,76 +321,138 @@
                                         </div>
                                     {% endif %}
                                 {% endfor %}
-                                {% if not cases|dictsortbykey:'status'|dictsortbykey:'on_hold' %}
-                                    <div class="p-4 text-sm {% if is_admin %}text-purple-200{% else %}text-blue-200{% endif %}">No on hold cases</div>
+                                {% if not cases|dictsortbykey:'status'|dictsortbykey:'query' %}
+                                    <div class="p-4 text-sm {% if is_admin %}text-purple-200{% else %}text-blue-200{% endif %}">No query cases</div>
                                 {% endif %}
                             </div>
                         </div>
+                        {# Reassigned Work folded into Pending with a badge #}
 
                         
 
-                        <!-- Document Pending Section -->
+                        {% if not is_admin %}
+                        <!-- Positive Section (Advocate) -->
                         <div class="bg-white/20 backdrop-blur-md border-white/30 rounded-2xl shadow-xl overflow-hidden border">
-                            <div class="px-4 py-3 {% if is_admin %}bg-indigo-600{% else %}bg-indigo-600{% endif %} text-white font-semibold flex items-center space-x-2">
-                                <i class="fas fa-file-alt"></i>
-                                <span>Document Pending</span>
+                            <div class="px-4 py-3 bg-emerald-700 text-white font-semibold flex items-center space-x-2">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Positive</span>
+                                <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.positive|default:0 }}</span>
                             </div>
                             <div class="divide-y divide-white/10">
                                 {% for c in cases %}
-                                    {% if c.status == 'document_pending' %}
+                                    {% if c.status == 'positive' %}
                                         <div class="p-4 flex items-center justify-between hover:bg-white/10 transition">
                                             <div>
-                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}</p>
-                                                <p class="text-xs {% if is_admin %}text-gray-200{% else %}text-gray-200{% endif %}">{{ c.applicant_name }}</p>
+                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                    {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+                                                </p>
+                                                <p class="text-xs text-purple-200">Ref: {{ c.legal_reference_number|default:'--' }}</p>
                                             </div>
                                             <div class="flex space-x-2">
                                                 <a href="{% url 'case_detail' c.id %}" class="text-blue-200 hover:text-blue-100 text-xs underline font-medium">Detail</a>
-                                                {% if c.assigned_advocate %}
-                                                    <a href="{% url 'work_on_case' c.id %}" class="text-cyan-200 hover:text-cyan-100 text-xs underline font-medium">Work</a>
-                                                    <a href="{% url 'case_action' c.id %}" class="text-green-200 hover:text-green-100 text-xs underline font-medium">Action</a>
-                                                {% endif %}
-                                                {% if is_admin %}
-                                                    <a href="{% url 'delete_case' c.id %}" class="text-red-300 hover:text-red-200 text-xs underline">Delete</a>
-                                                {% endif %}
                                             </div>
                                         </div>
                                     {% endif %}
                                 {% endfor %}
-                                {% if not cases|dictsortbykey:'status'|dictsortbykey:'document_pending' %}
-                                    <div class="p-4 text-sm {% if is_admin %}text-purple-200{% else %}text-blue-200{% endif %}">No document pending cases</div>
+                                {% if not cases|dictsortbykey:'status'|dictsortbykey:'positive' %}
+                                    <div class="p-4 text-sm text-blue-200">No positive cases</div>
                                 {% endif %}
                             </div>
                         </div>
+
+                        <!-- Positive Subject to Search Section (Advocate) -->
+                        <div class="bg-white/20 backdrop-blur-md border-white/30 rounded-2xl shadow-xl overflow-hidden border">
+                            <div class="px-4 py-3 bg-teal-700 text-white font-semibold flex items-center space-x-2">
+                                <i class="fas fa-check-double"></i>
+                                <span>Positive Subject to Search</span>
+                                <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.positive_subject_tosearch|default:0 }}</span>
+                            </div>
+                            <div class="divide-y divide-white/10">
+                                {% for c in cases %}
+                                    {% if c.status == 'positive_subject_tosearch' %}
+                                        <div class="p-4 flex items-center justify-between hover:bg-white/10 transition">
+                                            <div>
+                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                    {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+                                                </p>
+                                                <p class="text-xs text-purple-200">Ref: {{ c.legal_reference_number|default:'--' }}</p>
+                                            </div>
+                                            <div class="flex space-x-2">
+                                                <a href="{% url 'case_detail' c.id %}" class="text-blue-200 hover:text-blue-100 text-xs underline font-medium">Detail</a>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if not cases|dictsortbykey:'status'|dictsortbykey:'positive_subject_tosearch' %}
+                                    <div class="p-4 text-sm text-blue-200">No positive subject to search cases</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Negative Section (Advocate) -->
+                        <div class="bg-white/20 backdrop-blur-md border-white/30 rounded-2xl shadow-xl overflow-hidden border">
+                            <div class="px-4 py-3 bg-red-700 text-white font-semibold flex items-center space-x-2">
+                                <i class="fas fa-times-circle"></i>
+                                <span>Negative</span>
+                                <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.negative|default:0 }}</span>
+                            </div>
+                            <div class="divide-y divide-white/10">
+                                {% for c in cases %}
+                                    {% if c.status == 'negative' %}
+                                        <div class="p-4 flex items-center justify-between hover:bg-white/10 transition">
+                                            <div>
+                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                    {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+                                                </p>
+                                                <p class="text-xs text-purple-200">Ref: {{ c.legal_reference_number|default:'--' }}</p>
+                                            </div>
+                                            <div class="flex space-x-2">
+                                                <a href="{% url 'case_detail' c.id %}" class="text-blue-200 hover:text-blue-100 text-xs underline font-medium">Detail</a>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if not cases|dictsortbykey:'status'|dictsortbykey:'negative' %}
+                                    <div class="p-4 text-sm text-blue-200">No negative cases</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
 
                         <!-- SRO Document Pending Section -->
                         <div class="bg-white/20 backdrop-blur-md border-white/30 rounded-2xl shadow-xl overflow-hidden border">
                             <div class="px-4 py-3 {% if is_admin %}bg-teal-600{% else %}bg-teal-600{% endif %} text-white font-semibold flex items-center space-x-2">
                                 <i class="fas fa-building"></i>
-                                <span>SRO Document Pending</span>
+                                                                <span>SRO Document Pending</span>
+                                                                <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ sro_document_pending_list|length }}</span>
                             </div>
                             <div class="divide-y divide-white/10">
-                                {% for c in cases %}
-                                    {% if c.status == 'sro_document_pending' %}
-                                        <div class="p-4 flex items-center justify-between hover:bg-white/10 transition">
-                                            <div>
-                                                <p class="text-sm font-semibold text-white">{{ c.case_number }}</p>
-                                                <p class="text-xs {% if is_admin %}text-gray-200{% else %}text-gray-200{% endif %}">{{ c.applicant_name }}</p>
-                                            </div>
-                                            <div class="flex space-x-2">
-                                                <a href="{% url 'case_detail' c.id %}" class="text-blue-200 hover:text-blue-100 text-xs underline font-medium">Detail</a>
-                                                {% if c.assigned_advocate %}
-                                                    <a href="{% url 'work_on_case' c.id %}" class="text-cyan-200 hover:text-cyan-100 text-xs underline font-medium">Work</a>
-                                                    <a href="{% url 'case_action' c.id %}" class="text-green-200 hover:text-green-100 text-xs underline font-medium">Action</a>
-                                                {% endif %}
-                                                {% if is_admin %}
-                                                    <a href="{% url 'delete_case' c.id %}" class="text-red-300 hover:text-red-200 text-xs underline">Delete</a>
-                                                {% endif %}
-                                            </div>
+                                {% for c in sro_document_pending_list %}
+                                    <div class="p-4 flex items-center justify-between hover:bg-white/10 transition">
+                                        <div>
+                                            <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+                                            </p>
+                                            <p class="text-xs {% if is_admin %}text-gray-200{% else %}text-gray-200{% endif %}">{{ c.applicant_name }}</p>
                                         </div>
-                                    {% endif %}
+                                        <div class="flex space-x-2">
+                                            <a href="{% url 'case_detail' c.id %}" class="text-blue-200 hover:text-blue-100 text-xs underline font-medium">Detail</a>
+                                            {% if c.assigned_advocate %}
+                                                {% if c.status == 'query' %}
+                                                <span class="text-yellow-200 text-xs font-medium">Reopen to work</span>
+                                                {% else %}
+                                                <a href="{% url 'work_on_case' c.id %}" class="text-cyan-200 hover:text-cyan-100 text-xs underline font-medium">Work</a>
+                                                {% endif %}
+                                                <a href="{% url 'case_action' c.id %}" class="text-green-200 hover:text-green-100 text-xs underline font-medium">Action</a>
+                                            {% endif %}
+                                            {% if is_admin %}
+                                                <a href="{% url 'delete_case' c.id %}" class="text-red-300 hover:text-red-200 text-xs underline">Delete</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 {% endfor %}
-                                {% if not cases|dictsortbykey:'status'|dictsortbykey:'sro_document_pending' %}
-                                    <div class="p-4 text-sm {% if is_admin %}text-purple-200{% else %}text-blue-200{% endif %}">No SRO document pending cases</div>
+                                {% if sro_document_pending_list|length == 0 %}
+                                    <div class="p-4 text-sm {% if is_admin %}text-purple-200{% else %}text-blue-200{% endif %}">No SRO document pending cases for you</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -375,13 +470,16 @@
                         <div class="px-4 py-3 bg-emerald-800/60 text-white font-semibold flex items-center space-x-2">
                             <i class="fas fa-check-circle"></i>
                             <span>Positive</span>
+                            <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.positive|default:0 }}</span>
                         </div>
                         <div class="divide-y divide-white/10">
                             {% for c in cases %}
                                 {% if c.status == 'positive' %}
                                     <div class="p-4 flex items-center justify-between hover:bg-white/5 transition">
                                         <div>
-                                            <p class="text-sm font-semibold text-white">{{ c.case_number }}</p>
+                                            <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+                                            </p>
                                             <p class="text-xs text-purple-200">Ref: {{ c.legal_reference_number|default:'--' }}</p>
                                         </div>
                                         <div class="flex space-x-2">
@@ -404,13 +502,16 @@
                         <div class="px-4 py-3 bg-teal-800/60 text-white font-semibold flex items-center space-x-2">
                             <i class="fas fa-check-double"></i>
                             <span>Positive Subject to Search</span>
+                            <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.positive_subject_tosearch|default:0 }}</span>
                         </div>
                         <div class="divide-y divide-white/10">
                             {% for c in cases %}
                                 {% if c.status == 'positive_subject_tosearch' %}
                                     <div class="p-4 flex items-center justify-between hover:bg-white/5 transition">
                                         <div>
-                                            <p class="text-sm font-semibold text-white">{{ c.case_number }}</p>
+                                            <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+                                            </p>
                                             <p class="text-xs text-purple-200">Ref: {{ c.legal_reference_number|default:'--' }}</p>
                                         </div>
                                         <div class="flex space-x-2">
@@ -433,13 +534,16 @@
                         <div class="px-4 py-3 bg-red-800/60 text-white font-semibold flex items-center space-x-2">
                             <i class="fas fa-times-circle"></i>
                             <span>Negative</span>
+                            <span class="ml-2 text-xs bg-white/20 rounded px-2 py-0.5">{{ status_counts.negative|default:0 }}</span>
                         </div>
                         <div class="divide-y divide-white/10">
                             {% for c in cases %}
                                 {% if c.status == 'negative' %}
                                     <div class="p-4 flex items-center justify-between hover:bg-white/5 transition">
                                         <div>
-                                            <p class="text-sm font-semibold text-white">{{ c.case_number }}</p>
+                                            <p class="text-sm font-semibold text-white">{{ c.case_number }}
+                                                {% if c.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+                                            </p>
                                             <p class="text-xs text-purple-200">Ref: {{ c.legal_reference_number|default:'--' }}</p>
                                         </div>
                                         <div class="flex space-x-2">

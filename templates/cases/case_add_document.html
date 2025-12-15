@@ -1,0 +1,146 @@
+{% extends 'cases/base.html' %}
+{% block title %}Add Documents{% endblock %}
+{% block content %}
+<style>
+  .form-control { 
+    width: 100%; 
+    border: 1px solid rgba(255, 255, 255, 0.4); 
+    border-radius: 0.5rem; 
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    backdrop-filter: blur(10px);
+    font-weight: 500;
+  }
+  .form-control::placeholder {
+    color: rgba(31, 41, 55, 0.6);
+  }
+  .form-control:focus {
+    outline: none;
+    border-color: #1e3a8a;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  }
+  input[type="file"]::file-selector-button {
+    background: linear-gradient(to right, #3b82f6, #8b5cf6);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 1rem;
+  }
+  input[type="file"]::file-selector-button:hover {
+    background: linear-gradient(to right, #2563eb, #7c3aed);
+  }
+  .file-item {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+  }
+</style>
+
+<div class="min-h-screen py-8" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-white/30">
+      <div class="px-6 py-5 border-b border-white/20 bg-white/20 backdrop-blur">
+        <div class="flex items-center">
+          <div class="bg-white/20 backdrop-blur-sm p-2.5 rounded-xl mr-3 border border-white/30">
+            <i class="fas fa-plus-circle text-2xl text-white"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-white">Add Additional Documents</h2>
+            <p class="text-xs text-purple-100 mt-0.5">Case: {{ case.case_number }}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="p-8">
+        {% if messages %}
+          <div class="mb-6 space-y-2">
+            {% for message in messages %}
+              <div class="{% if message.tags == 'error' %}bg-red-500/30 border-red-400/60{% else %}bg-green-500/30 border-green-400/60{% endif %} border text-white p-4 rounded-xl backdrop-blur-md">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        
+        <div class="bg-blue-500/30 border border-blue-400/60 text-white p-4 rounded-xl backdrop-blur-md mb-6">
+          <p class="text-sm"><i class="fas fa-info-circle mr-2"></i>Upload additional supporting documents for this case. Each file can have a name/description. Max 5MB per file.</p>
+        </div>
+        
+        <form method="post" enctype="multipart/form-data" id="uploadForm" class="space-y-6">
+          {% csrf_token %}
+          
+          <div id="filesContainer">
+            <div class="file-item" data-index="0">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-sm font-semibold text-white mb-2"><i class="fas fa-file mr-1"></i>Document File <span class="text-red-300">*</span></label>
+                  <input type="file" name="documents" accept=".pdf,.doc,.docx,image/*" required class="form-control"/>
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-white mb-2"><i class="fas fa-tag mr-1"></i>Document Name/Description</label>
+                  <input type="text" name="descriptions" placeholder="e.g., Property Tax Receipt, Survey Map, etc." class="form-control"/>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <button type="button" onclick="addFileInput()" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-white/20 border border-white/40 text-white font-semibold rounded-xl hover:bg-white/30 transition-all backdrop-blur-md">
+            <i class="fas fa-plus mr-2"></i>Add Another Document
+          </button>
+          
+          <div class="flex justify-end gap-3 pt-6 border-t border-white/20">
+            <a href="{% url 'case_detail' case.id %}" class="inline-flex items-center px-6 py-3 border border-white/30 rounded-xl text-white bg-white/10 backdrop-blur hover:bg-white/20 transition-all duration-200">
+              <i class="fas fa-arrow-left mr-2"></i>Cancel
+            </a>
+            <button type="submit" class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg">
+              <i class="fas fa-upload mr-2"></i>Upload All Documents
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let fileIndex = 1;
+
+function addFileInput() {
+  const container = document.getElementById('filesContainer');
+  const newItem = document.createElement('div');
+  newItem.className = 'file-item';
+  newItem.setAttribute('data-index', fileIndex);
+  newItem.innerHTML = `
+    <div class="flex justify-between items-start mb-3">
+      <span class="text-white font-semibold text-sm">Document ${fileIndex + 1}</span>
+      <button type="button" onclick="removeFileInput(this)" class="text-red-300 hover:text-red-100 transition">
+        <i class="fas fa-times-circle"></i>
+      </button>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-sm font-semibold text-white mb-2"><i class="fas fa-file mr-1"></i>Document File <span class="text-red-300">*</span></label>
+        <input type="file" name="documents" accept=".pdf,.doc,.docx,image/*" required class="form-control"/>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-white mb-2"><i class="fas fa-tag mr-1"></i>Document Name/Description</label>
+        <input type="text" name="descriptions" placeholder="e.g., Property Tax Receipt, Survey Map, etc." class="form-control"/>
+      </div>
+    </div>
+  `;
+  container.appendChild(newItem);
+  fileIndex++;
+}
+
+function removeFileInput(btn) {
+  btn.closest('.file-item').remove();
+}
+</script>
+{% endblock %}

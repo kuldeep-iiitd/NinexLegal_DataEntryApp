@@ -40,6 +40,8 @@ def dashboard(request):
         if employee_type == 'advocate' and not is_admin:
             # Filter out child cases - only show parent cases
             assigned_cases = Case.objects.filter(assigned_advocate=employee, parent_case__isnull=True).order_by('-updated_at')
+            # Separate child cases for independent trays
+            assigned_child_cases = Case.objects.filter(assigned_advocate=employee, parent_case__isnull=False).order_by('-updated_at')
             total_cases = assigned_cases.count()
             active_cases = assigned_cases.filter(status__in=['draft','on_hold', 'on_query', 'query']).count()
             pending_cases_qs = assigned_cases.filter(status__in=['pending','draft'])
@@ -54,11 +56,21 @@ def dashboard(request):
 
             # Completed cases categorized - only parent cases
             positive_cases = assigned_cases.filter(status='positive').order_by('-completed_at')
+            positive_child_cases = assigned_child_cases.filter(status='positive').order_by('-completed_at')
             positive_subject_cases = assigned_cases.filter(status='positive_subject_tosearch').order_by('-completed_at')
+            positive_subject_child_cases = assigned_child_cases.filter(status='positive_subject_tosearch').order_by('-completed_at')
             negative_cases = assigned_cases.filter(status='negative').order_by('-completed_at')
+            negative_child_cases = assigned_child_cases.filter(status='negative').order_by('-completed_at')
             
             # SRO document pending cases - only parent cases
             sro_document_pending_cases = assigned_cases.filter(status='sro_document_pending').order_by('-updated_at')
+            sro_document_pending_child_cases = assigned_child_cases.filter(status='sro_document_pending').order_by('-updated_at')
+            sro_document_pending_total = sro_document_pending_cases.count() + sro_document_pending_child_cases.count()
+            
+            # Compute totals for completed categories (parent + child)
+            positive_total = positive_cases.count() + positive_child_cases.count()
+            positive_subject_total = positive_subject_cases.count() + positive_subject_child_cases.count()
+            negative_total = negative_cases.count() + negative_child_cases.count()
 
             # Completed search (do not show full list by default)
             completed_search = (request.GET.get('completed_search') or '').strip()
@@ -80,6 +92,7 @@ def dashboard(request):
                 "employee_type": employee_type,
                 "employee": employee,
                 "assigned_cases": assigned_cases,
+                "assigned_child_cases": assigned_child_cases,
                 "total_cases": total_cases,
                 "active_cases": active_cases,
                 "pending_cases": pending_cases,
@@ -95,15 +108,37 @@ def dashboard(request):
                 "completed_results": completed_results,
                 # Completed categories
                 "positive_cases": positive_cases,
+                "positive_child_cases": positive_child_cases,
+                "positive_total": positive_total,
                 "positive_subject_cases": positive_subject_cases,
+                "positive_subject_child_cases": positive_subject_child_cases,
+                "positive_subject_total": positive_subject_total,
                 "negative_cases": negative_cases,
+                "negative_child_cases": negative_child_cases,
+                "negative_total": negative_total,
                 "sro_document_pending_cases": sro_document_pending_cases,
+                "sro_document_pending_child_cases": sro_document_pending_child_cases,
+                "sro_document_pending_total": sro_document_pending_total,
             }
             return render(request, "accounts/employee_dashboard.html", context)
 
 
         if employee_type == 'sro' and not is_admin:
-            sro_cases = Case.objects.filter(forwarded_to_sro=True, status__in=['positive_subject_tosearch', 'negative', 'positive'], parent_case__isnull=True).order_by('-updated_at')
+            # Get search query from request
+            search_query = request.GET.get('search', '').strip()
+            eligible_statuses = ['positive_subject_tosearch', 'negative', 'positive']
+            # Independent listing (parents and children). Include PSTS automatically or explicitly forwarded cases.
+            sro_cases = Case.objects.filter(
+                Q(forwarded_to_sro=True) | Q(status='positive_subject_tosearch'),
+                status__in=eligible_statuses
+            ).order_by('-created_at')  # Newest cases first
+            # Apply search filter if provided
+            if search_query:
+                sro_cases = sro_cases.filter(
+                    Q(applicant_name__icontains=search_query) |
+                    Q(case_number__icontains=search_query) |
+                    Q(legal_reference_number__icontains=search_query)
+                ).distinct()
             sro_pss_cases = sro_cases.filter(status='positive_subject_tosearch')
             sro_negative_cases = sro_cases.filter(status='negative')
             sro_positive_cases = sro_cases.filter(status='positive')
@@ -124,6 +159,7 @@ def dashboard(request):
                 "sro_pss_cases": sro_pss_cases,
                 "sro_negative_cases": sro_negative_cases,
                 "sro_positive_cases": sro_positive_cases,
+                "search_query": search_query,
             }
             return render(request, "accounts/sro_dashboard.html", context)
 
@@ -132,8 +168,8 @@ def dashboard(request):
         from datetime import timedelta
         stats = build_admin_stats()
         
-        # Status cards for admin dashboard - only parent cases
-        status_counts = Case.objects.filter(parent_case__isnull=True).values('status').annotate(count=Count('id')).order_by()
+        # Status cards for admin dashboard - all cases (parent and children)
+        status_counts = Case.objects.values('status').annotate(count=Count('id')).order_by()
         status_dict = {row['status']: row['count'] for row in status_counts}
         
         active_cards_def = [
@@ -142,7 +178,6 @@ def dashboard(request):
             ('pending_assignment','Pending Assign'),
             ('pending','Pending'),
             ('on_hold','On Hold'),
-            ('on_query','On Query'),
             ('query','Query'),
             ('document_pending','Doc Pending'),
         ]
@@ -169,7 +204,7 @@ def dashboard(request):
         advocates = Employee.objects.filter(employee_type='advocate', is_active=True)
         advocate_stats = []
         for adv in advocates:
-            parent_cases = Case.objects.filter(assigned_advocate=adv, parent_case__isnull=True)
+            parent_cases = Case.objects.filter(assigned_advocate=adv)
             advocate_stats.append({
                 'advocate': adv,
                 'total_assigned': parent_cases.count(),
@@ -185,7 +220,7 @@ def dashboard(request):
         banks = Bank.objects.all()
         bank_stats = []
         for bank in banks:
-            parent_cases = Case.objects.filter(bank=bank, parent_case__isnull=True)
+            parent_cases = Case.objects.filter(bank=bank)
             total = parent_cases.count()
             if total > 0:
                 bank_stats.append({
@@ -200,19 +235,19 @@ def dashboard(request):
         bank_stats.sort(key=lambda x: x['total_cases'], reverse=True)
         
         # Recent activity - only parent cases
-        recent_completed = Case.objects.filter(parent_case__isnull=True, status__in=['positive','negative','positive_subject_tosearch']).order_by('-updated_at')[:10]
-        recent_assigned = Case.objects.filter(parent_case__isnull=True, assigned_advocate__isnull=False).exclude(status__in=['positive','negative','positive_subject_tosearch']).order_by('-updated_at')[:10]
+        recent_completed = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch']).order_by('-updated_at')[:10]
+        recent_assigned = Case.objects.filter(assigned_advocate__isnull=False).exclude(status__in=['positive','negative','positive_subject_tosearch']).order_by('-updated_at')[:10]
         
         # Time-based stats - only parent cases
-        cases_today = Case.objects.filter(parent_case__isnull=True, created_at__date=today).count()
-        cases_yesterday = Case.objects.filter(parent_case__isnull=True, created_at__date=yesterday).count()
-        cases_7days = Case.objects.filter(parent_case__isnull=True, created_at__date__gte=last_7_days).count()
-        cases_30days = Case.objects.filter(parent_case__isnull=True, created_at__date__gte=last_30_days).count()
+        cases_today = Case.objects.filter(created_at__date=today).count()
+        cases_yesterday = Case.objects.filter(created_at__date=yesterday).count()
+        cases_7days = Case.objects.filter(created_at__date__gte=last_7_days).count()
+        cases_30days = Case.objects.filter(created_at__date__gte=last_30_days).count()
         
-        completed_today = Case.objects.filter(parent_case__isnull=True, status__in=['positive','negative','positive_subject_tosearch'], updated_at__date=today).count()
-        completed_yesterday = Case.objects.filter(parent_case__isnull=True, status__in=['positive','negative','positive_subject_tosearch'], updated_at__date=yesterday).count()
-        completed_7days = Case.objects.filter(parent_case__isnull=True, status__in=['positive','negative','positive_subject_tosearch'], updated_at__date__gte=last_7_days).count()
-        completed_30days = Case.objects.filter(parent_case__isnull=True, status__in=['positive','negative','positive_subject_tosearch'], updated_at__date__gte=last_30_days).count()
+        completed_today = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date=today).count()
+        completed_yesterday = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date=yesterday).count()
+        completed_7days = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date__gte=last_7_days).count()
+        completed_30days = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date__gte=last_30_days).count()
         
         context = {
             "username": user.username,
@@ -365,10 +400,10 @@ def admin_statistics(request):
     # Banks with active cases
     bank_active_counts = Bank.objects.annotate(active_cases=Count('cases', filter=Q(cases__status__in=['pending','draft','on_hold','on_query','query','document_pending']))).order_by('-active_cases')[:10]
 
-    # Summary stats for header
-    total_cases = Case.objects.filter(parent_case__isnull=True).count()
-    active_cases = Case.objects.filter(parent_case__isnull=True, status__in=['pending','draft','on_hold','on_query','query','document_pending']).count()
-    completed_cases = Case.objects.filter(parent_case__isnull=True, status__in=['positive','negative','positive_subject_tosearch']).count()
+    # Summary stats for header - include all cases (parent and children)
+    total_cases = Case.objects.count()
+    active_cases = Case.objects.filter(status__in=['pending','draft','on_hold','on_query','query','document_pending']).count()
+    completed_cases = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch']).count()
 
     context = {
         'is_admin': True,
@@ -396,7 +431,7 @@ def cases_by_status(request, status):
         return redirect('dashboard')
     
     # Only show parent cases
-    cases = Case.objects.filter(status=status, parent_case__isnull=True).select_related('assigned_advocate', 'bank', 'branch').order_by('-updated_at')
+    cases = Case.objects.filter(status=status).select_related('assigned_advocate', 'bank', 'branch').order_by('-updated_at')
     
     status_labels = {
         'draft': 'Draft',
@@ -436,7 +471,7 @@ def cases_by_advocate(request, advocate_id):
     advocate = get_object_or_404(Employee, id=advocate_id, employee_type='advocate')
     
     # Only show parent cases
-    cases = Case.objects.filter(assigned_advocate=advocate, parent_case__isnull=True).select_related('bank', 'branch').order_by('-updated_at')
+    cases = Case.objects.filter(assigned_advocate=advocate).select_related('bank', 'branch').order_by('-updated_at')
     
     # Categorize cases
     pending = cases.filter(status__in=['pending', 'draft', 'on_hold', 'on_query', 'query', 'document_pending'])
@@ -469,7 +504,7 @@ def cases_by_bank(request, bank_id):
     bank = get_object_or_404(Bank, id=bank_id)
     
     # Only show parent cases
-    cases = Case.objects.filter(bank=bank, parent_case__isnull=True).select_related('assigned_advocate', 'branch').order_by('-updated_at')
+    cases = Case.objects.filter(bank=bank).select_related('assigned_advocate', 'branch').order_by('-updated_at')
     
     # Categorize cases
     active = cases.filter(status__in=['pending', 'draft', 'on_hold', 'on_query', 'query', 'document_pending', 'pending_assignment'])
@@ -547,3 +582,55 @@ def generate_mis(request):
         ])
     
     return response
+
+
+@login_required
+def super_sro_dashboard(request):
+    """Super SRO Dashboard for admins - shows ALL cases that are forwarded to SRO or are PSTS."""
+    # Check if user is admin
+    user = request.user
+    is_admin = user.is_superuser or user.groups.filter(name__in=['ADMIN', 'CO-ADMIN']).exists()
+    
+    if not is_admin:
+        messages.error(request, "You don't have permission to access the Super SRO Dashboard.")
+        return redirect('dashboard')
+    
+    # Get search query
+    search_query = request.GET.get('search', '').strip()
+    
+    # Get all SRO-eligible cases (forwarded to SRO or PSTS status)
+    # Order by created_at descending to show newest cases first
+    eligible_statuses = ['positive', 'positive_subject_tosearch', 'negative']
+    sro_cases = Case.objects.filter(
+        Q(forwarded_to_sro=True) | Q(status='positive_subject_tosearch'),
+        status__in=eligible_statuses
+    ).order_by('-created_at')  # Newest first
+    
+    # Apply search filter if provided
+    if search_query:
+        sro_cases = sro_cases.filter(
+            Q(applicant_name__icontains=search_query) |
+            Q(case_number__icontains=search_query) |
+            Q(legal_reference_number__icontains=search_query)
+        ).distinct()
+    
+    # Split by status
+    sro_pss_cases = sro_cases.filter(status='positive_subject_tosearch')
+    sro_negative_cases = sro_cases.filter(status='negative')
+    sro_positive_cases = sro_cases.filter(status='positive')
+    
+    context = {
+        "username": user.username,
+        "is_admin": True,
+        "is_sro": True,
+        "sro_all_cases": sro_cases,
+        "sro_total_cases": sro_cases.count(),
+        "sro_pss_count": sro_pss_cases.count(),
+        "sro_negative_count": sro_negative_cases.count(),
+        "sro_positive_count": sro_positive_cases.count(),
+        "sro_pss_cases": sro_pss_cases,
+        "sro_negative_cases": sro_negative_cases,
+        "sro_positive_cases": sro_positive_cases,
+        "search_query": search_query,
+    }
+    return render(request, "accounts/sro_dashboard.html", context)

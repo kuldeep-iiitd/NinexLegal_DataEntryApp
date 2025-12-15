@@ -4,12 +4,28 @@
 <div class="min-h-screen py-8" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
 <div class="max-w-2xl mx-auto bg-white/10 backdrop-blur-md p-6 rounded-xl shadow-lg border border-white/20">
   <h2 class="text-2xl font-bold mb-2 text-white">Add Child Case</h2>
-  <p class="text-sm text-white/80 mb-4">Parent: {{ parent.case_number }} {% if parent.legal_reference_number %}• LRN: {{ parent.legal_reference_number }}{% endif %}</p>
+  <p class="text-sm text-white/80 mb-2">Parent: {{ parent.case_number }} {% if parent.legal_reference_number %}• LRN: {{ parent.legal_reference_number }}{% endif %}</p>
+  {% if last_child %}
+    <div class="mb-4 px-3 py-2 bg-white/10 border border-white/20 rounded text-white/90 text-sm">
+      Last child created: <span class="font-semibold">{{ last_child.case_number }}</span>
+      {% if last_child.legal_reference_number %} • LRN: <span class="font-semibold">{{ last_child.legal_reference_number }}</span>{% endif %}
+      • Status: <span class="font-semibold">{{ last_child.get_status_display }}</span>
+    </div>
+  {% endif %}
+  {% if form.errors %}
+    <div class="mb-4 px-3 py-2 bg-red-600/20 border border-red-300/30 rounded text-red-100 text-sm">
+      Please fix the errors below.
+    </div>
+  {% endif %}
   <form method="post" class="space-y-4">
     {% csrf_token %}
     <div>
       <label class="block text-sm font-medium text-white">Property Address</label>
       {{ form.property_address }}
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-white">Initial Status</label>
+      {{ form.initial_status }}
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
@@ -87,7 +103,11 @@
     const data = await fetchJSON(`/cases/api/locations/tehsils/?${params.toString()}`);
     (data.results||[]).forEach(item=>{
       const name = item.label.split(' (')[0];
-      const opt = document.createElement('option'); opt.value = name; opt.textContent = name; tehsilSel.appendChild(opt);
+      const opt = document.createElement('option');
+      // Store just the tehsil name in value, but show full label
+      opt.value = name;
+      opt.textContent = item.label;
+      tehsilSel.appendChild(opt);
     });
     // Preselect parent's tehsil if provided
     if (tehsilSel.getAttribute('data-initial')){

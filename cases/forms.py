@@ -583,6 +583,10 @@ class ChildCaseForm(forms.Form):
     district = forms.CharField(required=False, widget=forms.Select(attrs={'class':'w-full border rounded p-2'}))
     tehsil = forms.CharField(required=False, widget=forms.Select(attrs={'class':'w-full border rounded p-2'}))
     branch = forms.ModelChoiceField(required=False, queryset=BankBranch.objects.all(), widget=forms.Select(attrs={'class':'w-full border rounded p-2'}))
+    # Allow setting initial child status and uploading a document at creation
+    initial_status = forms.ChoiceField(required=False, choices=[], widget=forms.Select(attrs={'class':'w-full border rounded p-2'}))
+    supporting_document = forms.FileField(required=False, label="Upload Document (PDF/DOC/Image)", widget=forms.ClearableFileInput(attrs={'accept':'.pdf,.doc,.docx,image/*','class':'w-full border rounded p-2'}))
+    document_description = forms.CharField(required=False, max_length=255, widget=forms.TextInput(attrs={'class':'w-full border rounded p-2','placeholder':'Optional description'}))
 
     def __init__(self, *args, **kwargs):
         parent_case = kwargs.pop('parent_case', None)
@@ -621,6 +625,20 @@ class ChildCaseForm(forms.Form):
             if parent_case.tehsil:
                 self.fields['tehsil'].initial = parent_case.tehsil
                 self.fields['tehsil'].widget.attrs['data-initial'] = parent_case.tehsil
+        # Populate status choices from Case model
+        try:
+            allowed = {'draft','query','positive','negative','positive_subject_tosearch'}
+            filtered = [c for c in Case.STATUS_CHOICES if c[0] in allowed]
+            self.fields['initial_status'].choices = [('', 'Select Status')] + filtered
+        except Exception:
+            self.fields['initial_status'].choices = [
+                ('', 'Select Status'),
+                ('draft','Draft'),
+                ('query','Query'),
+                ('positive','Positive'),
+                ('negative','Negative'),
+                ('positive_subject_to_search','Positive Subject to Search'),
+            ]
 
     def clean(self):
         cd = super().clean()
@@ -629,6 +647,19 @@ class ChildCaseForm(forms.Form):
         # If a state is chosen, ensure branch belongs to that state
         if branch and state and branch.state and branch.state.name.lower() != state.lower():
             self.add_error('branch', 'Selected branch does not belong to the chosen state.')
+        # Validate document if provided (optional for all statuses)
+        f = self.files.get('supporting_document')
+        if f:
+            if hasattr(f, 'size') and f.size > 5 * 1024 * 1024:
+                self.add_error('supporting_document', 'File too large (max 5MB).')
+            allowed = [
+                'application/pdf',
+                'image/jpeg','image/png','image/gif','image/webp',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ]
+            if hasattr(f, 'content_type') and f.content_type not in allowed:
+                self.add_error('supporting_document', 'Unsupported file type. Upload PDF, DOC/DOCX, or image.')
         return cd
 
 
@@ -651,6 +682,48 @@ class CaseDocumentUploadForm(forms.Form):
             self.add_error('supporting_document', 'Supporting document is required.')
         else:
             if f.size > 5 * 1024 * 1024:
+                self.add_error('supporting_document', 'File too large (max 5MB).')
+            allowed = [
+                'application/pdf',
+                'image/jpeg','image/png','image/gif','image/webp',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ]
+            if hasattr(f, 'content_type') and f.content_type not in allowed:
+                self.add_error('supporting_document', 'Unsupported file type. Upload PDF, DOC/DOCX, or image.')
+        return cd
+
+
+class FinalizeWithDocumentForm(forms.Form):
+    supporting_document = forms.FileField(
+        required=True,
+        label="Final Document (PDF/DOC/Image)",
+        widget=forms.ClearableFileInput(attrs={'accept':'.pdf,.doc,.docx,image/*','class':'w-full border rounded p-2'})
+    )
+    document_description = forms.CharField(
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={'class':'w-full border rounded p-2','placeholder':'Optional description'})
+    )
+    # Optional status selector; views may override or hide via force_status
+    status = forms.ChoiceField(
+        required=False,
+        choices=[('positive','Positive'),('negative','Negative'),('positive_subject_tosearch','Positive Subject to Search'),('query','Query'),('draft','Draft')],
+        widget=forms.Select(attrs={'class':'w-full border rounded p-2'})
+    )
+    remark = forms.CharField(
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={'class':'w-full border rounded p-2','placeholder':'Optional remark'})
+    )
+
+    def clean(self):
+        cd = super().clean()
+        f = self.files.get('supporting_document')
+        if not f:
+            self.add_error('supporting_document', 'Supporting document is required.')
+        else:
+            if hasattr(f, 'size') and f.size > 5 * 1024 * 1024:
                 self.add_error('supporting_document', 'File too large (max 5MB).')
             allowed = [
                 'application/pdf',
