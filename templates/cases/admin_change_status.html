@@ -1,0 +1,123 @@
+{% extends 'cases/base.html' %}
+{% block title %}Change Case Status{% endblock %}
+{% block content %}
+<style>
+  .form-control { 
+    width: 100%; 
+    border: 1px solid rgba(255, 255, 255, 0.4); 
+    border-radius: 0.5rem; 
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    backdrop-filter: blur(10px);
+    font-weight: 500;
+  }
+  .form-control::placeholder {
+    color: rgba(31, 41, 55, 0.6);
+  }
+  .form-control:focus {
+    outline: none;
+    border-color: #1e3a8a;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  }
+  select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%231f2937' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    color: #1f2937;
+    font-weight: 600;
+  }
+  select.form-control option {
+    background: white;
+    color: #1f2937;
+    font-weight: 500;
+    padding: 0.5rem;
+  }
+  textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+  }
+</style>
+
+<div class="min-h-screen py-8" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white/20 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-white/30">
+      <div class="px-6 py-5 border-b border-white/20 bg-white/20 backdrop-blur">
+        <div class="flex items-center">
+          <div class="bg-white/20 backdrop-blur-sm p-2.5 rounded-xl mr-3 border border-white/30">
+            <i class="fas fa-exchange-alt text-2xl text-white"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-white">Change Case Status</h2>
+            <p class="text-xs text-purple-100 mt-0.5">Case: {{ case.case_number }} - {{ case.legal_reference_number|default:"No LRN" }}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="p-8">
+        {% if messages %}
+          <div class="mb-6 space-y-2">
+            {% for message in messages %}
+              <div class="{% if message.tags == 'error' %}bg-red-500/30 border-red-400/60{% else %}bg-green-500/30 border-green-400/60{% endif %} border text-white p-4 rounded-xl backdrop-blur-md">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        
+        <div class="bg-blue-500/30 border border-blue-400/60 text-white p-4 rounded-xl backdrop-blur-md mb-6">
+          <p class="text-sm font-semibold mb-1"><i class="fas fa-info-circle mr-2"></i>Current Status:</p>
+          <p class="text-lg font-bold">{{ case.get_status_display }}</p>
+        </div>
+        
+        <div class="bg-yellow-500/30 border border-yellow-400/60 text-white p-4 rounded-xl backdrop-blur-md mb-6">
+          <p class="text-sm"><i class="fas fa-exclamation-triangle mr-2"></i><strong>Admin Note:</strong> Changing status directly may affect case workflow. Use with caution.</p>
+        </div>
+        
+        <form method="post" class="space-y-6">
+          {% csrf_token %}
+          
+          <div>
+            <label class="block text-sm font-semibold text-white mb-2"><i class="fas fa-tag mr-1"></i>New Status <span class="text-red-300">*</span></label>
+            <select name="status" required class="form-control">
+              <option value="">-- Select New Status --</option>
+              <option value="draft">Draft</option>
+              <option value="quotation">Quotation</option>
+              <option value="pending_assignment">Pending Assignment</option>
+              <option value="pending">Pending</option>
+              <option value="on_hold">On Hold</option>
+              <option value="query">Query</option>
+              <option value="document_pending">Document Pending</option>
+              <option value="sro_document_pending">SRO Document Pending</option>
+              <option value="positive">Positive</option>
+              <option value="positive_subject_tosearch">Positive Subject to Search</option>
+              <option value="draft_positive_subject_tosearch">Draft Positive Subject to Search</option>
+              <option value="negative">Negative</option>
+            </select>
+            <p class="text-xs text-purple-100 mt-2">Select the new status for this case</p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-white mb-2"><i class="fas fa-comment-alt mr-1"></i>Remark (optional)</label>
+            <textarea name="remark" placeholder="Enter reason for status change..." class="form-control"></textarea>
+            <p class="text-xs text-purple-100 mt-2">Optional: Add a note explaining the status change</p>
+          </div>
+          
+          <div class="flex justify-end gap-3 pt-6 border-t border-white/20">
+            <a href="{% url 'case_detail' case.id %}" class="inline-flex items-center px-6 py-3 border border-white/30 rounded-xl text-white bg-white/10 backdrop-blur hover:bg-white/20 transition-all duration-200">
+              <i class="fas fa-arrow-left mr-2"></i>Cancel
+            </a>
+            <button type="submit" class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg">
+              <i class="fas fa-check mr-2"></i>Change Status
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

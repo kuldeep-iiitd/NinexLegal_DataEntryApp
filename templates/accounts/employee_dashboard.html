@@ -7,7 +7,9 @@
   <title>Advocate Dashboard - NinexLegal</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>body{background:linear-gradient(to bottom right,#1e3a8a,#3b82f6);min-height:100vh}</style>
+  <style>
+    body{background:linear-gradient(to bottom right,#1e3a8a,#3b82f6);min-height:100vh}
+  </style>
 </head>
 <body>
 <div class="container mx-auto px-4 py-6 max-w-7xl">
@@ -92,6 +94,50 @@
 </div>
 {% endfor %}
 {% for case in positive_subject_child_cases %}
+<div class="p-3 bg-gray-50 hover:bg-gray-100 rounded border text-sm">
+<div class="font-semibold text-gray-800">{{ case.case_number }}
+{% if case.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+</div>
+<div class="text-xs text-gray-600">{{ case.applicant_name }}</div>
+<div class="text-xs text-gray-500">LRN: {{ case.legal_reference_number|default:'--' }}</div>
+<div class="mt-2 flex gap-2">
+<a href="{% url 'case_detail' case.id %}" class="text-blue-600 hover:underline text-xs">Detail</a>
+</div>
+</div>
+{% endfor %}
+{% else %}
+<p class="text-gray-500 text-center py-4 text-sm">No cases</p>
+{% endif %}
+</div>
+</div>
+
+<!-- Draft Positive Subject to Search Cases -->
+<div class="mb-3">
+<button onclick="toggleSection('draft_positive_subject')" class="w-full flex items-center justify-between p-3 bg-purple-50 hover:bg-purple-100 rounded border border-purple-200 transition">
+<div class="flex items-center space-x-2">
+<i class="fas fa-file-alt text-purple-600"></i>
+<span class="font-semibold text-gray-800">Draft Positive Subject to Search</span>
+</div>
+<div class="flex items-center space-x-2">
+<span class="bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-bold">{{ draft_positive_subject_total }}</span>
+<i class="fas fa-chevron-down text-purple-600" id="draft_positive_subject-icon"></i>
+</div>
+</button>
+<div id="draft_positive_subject-section" class="hidden mt-2 space-y-2 pl-4">
+{% if draft_positive_subject_cases or draft_positive_subject_child_cases %}
+{% for case in draft_positive_subject_cases %}
+<div class="p-3 bg-gray-50 hover:bg-gray-100 rounded border text-sm">
+<div class="font-semibold text-gray-800">{{ case.case_number }}
+{% if case.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}
+</div>
+<div class="text-xs text-gray-600">{{ case.applicant_name }}</div>
+<div class="text-xs text-gray-500">LRN: {{ case.legal_reference_number|default:'--' }}</div>
+<div class="mt-2 flex gap-2">
+<a href="{% url 'case_detail' case.id %}" class="text-blue-600 hover:underline text-xs">Detail</a>
+</div>
+</div>
+{% endfor %}
+{% for case in draft_positive_subject_child_cases %}
 <div class="p-3 bg-gray-50 hover:bg-gray-100 rounded border text-sm">
 <div class="font-semibold text-gray-800">{{ case.case_number }}
 {% if case.parent_case %}<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500 text-white">Child</span>{% endif %}

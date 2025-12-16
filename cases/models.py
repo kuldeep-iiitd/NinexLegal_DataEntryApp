@@ -109,6 +109,7 @@ class Case(models.Model):
 		('document_pending', 'Document Pending'),
 		('sro_document_pending', 'SRO Document Pending'),
 		('positive_subject_tosearch', 'Positive Subject to Search'),
+		('draft_positive_subject_tosearch', 'Draft Positive Subject to Search'),
 		('pending_assignment', 'Pending Assignment'),
 		('pending', 'Pending'),
 	]
@@ -126,7 +127,7 @@ class Case(models.Model):
 	assigned_advocate = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name='assigned_cases', blank=True, null=True, limit_choices_to={'employee_type': 'advocate'})
 	
 	# Status and Tracking
-	status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending')
+	status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
 
 	# Quotation Workflow Fields
 	is_quotation = models.BooleanField(default=False, help_text="Indicates this case started as a quotation (no documents yet)")
@@ -176,9 +177,9 @@ class Case(models.Model):
 
 	def is_final_status(self):
 		"""Return True if the case is in a finalized state (no further work edits or new works allowed).
-		Final statuses: positive, negative, positive_subject_tosearch.
+		Final statuses: positive, negative, positive_subject_tosearch, draft_positive_subject_tosearch.
 		"""
-		return self.status in ['positive', 'negative', 'positive_subject_tosearch']
+		return self.status in ['positive', 'negative', 'positive_subject_tosearch', 'draft_positive_subject_tosearch']
 
 	def propagate_status_to_children(self):
 		"""Ensure all child cases have the same status as this parent case."""

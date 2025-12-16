@@ -545,6 +545,7 @@ class CaseActionForm(forms.Form):
         ('draft','Draft'),
         ('query','Query'),
         ('positive_subject_tosearch','Positive Subject to Search'),
+        ('draft_positive_subject_tosearch','Draft Positive Subject to Search'),
         ('positive','Positive'),
         ('negative','Negative')
     ], widget=forms.Select(attrs={'class': 'w-full border rounded p-2'}))

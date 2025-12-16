@@ -59,6 +59,8 @@ def dashboard(request):
             positive_child_cases = assigned_child_cases.filter(status='positive').order_by('-completed_at')
             positive_subject_cases = assigned_cases.filter(status='positive_subject_tosearch').order_by('-completed_at')
             positive_subject_child_cases = assigned_child_cases.filter(status='positive_subject_tosearch').order_by('-completed_at')
+            draft_positive_subject_cases = assigned_cases.filter(status='draft_positive_subject_tosearch').order_by('-completed_at')
+            draft_positive_subject_child_cases = assigned_child_cases.filter(status='draft_positive_subject_tosearch').order_by('-completed_at')
             negative_cases = assigned_cases.filter(status='negative').order_by('-completed_at')
             negative_child_cases = assigned_child_cases.filter(status='negative').order_by('-completed_at')
             
@@ -70,6 +72,7 @@ def dashboard(request):
             # Compute totals for completed categories (parent + child)
             positive_total = positive_cases.count() + positive_child_cases.count()
             positive_subject_total = positive_subject_cases.count() + positive_subject_child_cases.count()
+            draft_positive_subject_total = draft_positive_subject_cases.count() + draft_positive_subject_child_cases.count()
             negative_total = negative_cases.count() + negative_child_cases.count()
 
             # Completed search (do not show full list by default)
@@ -77,7 +80,7 @@ def dashboard(request):
             completed_results = []
             if completed_search:
                 # Filter to only parent cases in search results too
-                completed_results = assigned_cases.filter(status__in=['positive','negative','positive_subject_tosearch']).filter(
+                completed_results = assigned_cases.filter(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch']).filter(
                     Q(applicant_name__icontains=completed_search) |
                     Q(case_number__icontains=completed_search) |
                     Q(legal_reference_number__icontains=completed_search)
@@ -113,6 +116,9 @@ def dashboard(request):
                 "positive_subject_cases": positive_subject_cases,
                 "positive_subject_child_cases": positive_subject_child_cases,
                 "positive_subject_total": positive_subject_total,
+                "draft_positive_subject_cases": draft_positive_subject_cases,
+                "draft_positive_subject_child_cases": draft_positive_subject_child_cases,
+                "draft_positive_subject_total": draft_positive_subject_total,
                 "negative_cases": negative_cases,
                 "negative_child_cases": negative_child_cases,
                 "negative_total": negative_total,
@@ -183,6 +189,7 @@ def dashboard(request):
         ]
         completed_cards_def = [
             ('positive_subject_tosearch','PSS'),
+            ('draft_positive_subject_tosearch','Draft PSS'),
             ('positive','Positive'),
             ('negative','Negative'),
         ]
@@ -209,10 +216,10 @@ def dashboard(request):
                 'advocate': adv,
                 'total_assigned': parent_cases.count(),
                 'pending_count': parent_cases.filter(status__in=['pending','draft','on_hold','on_query','query','document_pending']).count(),
-                'completed_today': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date=today).count(),
-                'completed_yesterday': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date=yesterday).count(),
-                'completed_7days': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date__gte=last_7_days).count(),
-                'completed_30days': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date__gte=last_30_days).count(),
+                'completed_today': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch'], updated_at__date=today).count(),
+                'completed_yesterday': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch'], updated_at__date=yesterday).count(),
+                'completed_7days': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch'], updated_at__date__gte=last_7_days).count(),
+                'completed_30days': parent_cases.filter(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch'], updated_at__date__gte=last_30_days).count(),
             })
         advocate_stats.sort(key=lambda x: x['pending_count'], reverse=True)
         
@@ -235,8 +242,8 @@ def dashboard(request):
         bank_stats.sort(key=lambda x: x['total_cases'], reverse=True)
         
         # Recent activity - only parent cases
-        recent_completed = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch']).order_by('-updated_at')[:10]
-        recent_assigned = Case.objects.filter(assigned_advocate__isnull=False).exclude(status__in=['positive','negative','positive_subject_tosearch']).order_by('-updated_at')[:10]
+        recent_completed = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch']).order_by('-updated_at')[:10]
+        recent_assigned = Case.objects.filter(assigned_advocate__isnull=False).exclude(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch']).order_by('-updated_at')[:10]
         
         # Time-based stats - only parent cases
         cases_today = Case.objects.filter(created_at__date=today).count()
@@ -244,10 +251,10 @@ def dashboard(request):
         cases_7days = Case.objects.filter(created_at__date__gte=last_7_days).count()
         cases_30days = Case.objects.filter(created_at__date__gte=last_30_days).count()
         
-        completed_today = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date=today).count()
-        completed_yesterday = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date=yesterday).count()
-        completed_7days = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date__gte=last_7_days).count()
-        completed_30days = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch'], updated_at__date__gte=last_30_days).count()
+        completed_today = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch'], updated_at__date=today).count()
+        completed_yesterday = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch'], updated_at__date=yesterday).count()
+        completed_7days = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch'], updated_at__date__gte=last_7_days).count()
+        completed_30days = Case.objects.filter(status__in=['positive','negative','positive_subject_tosearch','draft_positive_subject_tosearch'], updated_at__date__gte=last_30_days).count()
         
         context = {
             "username": user.username,

@@ -219,7 +219,7 @@ def view_cases(request):
 		active_statuses = ['pending','on_hold','on_query','query','document_pending','sro_document_pending']
 		# Remove deprecated on_hold/on_query from advocate buckets and keep Draft out of Pending
 		active_statuses = ['pending','query','document_pending','sro_document_pending']
-		completed_statuses = ['positive','positive_subject_tosearch','negative']
+		completed_statuses = ['positive','positive_subject_tosearch','draft_positive_subject_tosearch','negative']
 		today = timezone.localdate()
 		pending_all = qs.filter(status__in=active_statuses)
 		# Reassigned tray: cases recently reassigned (most recent first)
@@ -227,7 +227,7 @@ def view_cases(request):
 		cutoff = timezone.now() - timedelta(days=7)
 		reassigned_cases = qs.filter(
 			reassigned_at__gte=cutoff
-		).exclude(status__in=['positive','positive_subject_tosearch','negative']).order_by('-reassigned_at')[:50]
+		).exclude(status__in=['positive','positive_subject_tosearch','draft_positive_subject_tosearch','negative']).order_by('-reassigned_at')[:50]
 		# Build Pending Today/Overall and include reassigned (we will mark with a badge in UI)
 		reassigned_ids = list(reassigned_cases.values_list('id', flat=True))
 		pending_today = pending_all.filter(updated_at__date=today)
@@ -254,9 +254,11 @@ def view_cases(request):
 	]
 	draft_buckets = [('Draft', 'draft', 'gray')]
 	completed_positive_buckets = [('Positive', 'positive', 'emerald')]
+	completed_pss_buckets = [('Positive Subject to Search', 'positive_subject_tosearch', 'teal')]
+	completed_draft_pss_buckets = [('Draft Positive Subject to Search', 'draft_positive_subject_tosearch', 'purple')]
 	completed_negative_buckets = [('Negative', 'negative', 'red')]
 
-	all_buckets = draft_buckets + quotation_buckets + pending_assignment_buckets + pending_buckets + active_buckets + completed_positive_buckets + completed_negative_buckets
+	all_buckets = draft_buckets + quotation_buckets + pending_assignment_buckets + pending_buckets + active_buckets + completed_positive_buckets + completed_pss_buckets + completed_draft_pss_buckets + completed_negative_buckets
 	status_counts = {s: 0 for s in [b[1] for b in all_buckets]}
 	# For advocate view, derive counts from categorized querysets to avoid misclassifying drafts as pending
 	if not is_admin:
@@ -269,6 +271,7 @@ def view_cases(request):
 			status_counts['draft'] = cases.filter(status='draft').count()
 			status_counts['positive'] = cases.filter(status='positive').count()
 			status_counts['positive_subject_tosearch'] = cases.filter(status='positive_subject_tosearch').count()
+			status_counts['draft_positive_subject_tosearch'] = cases.filter(status='draft_positive_subject_tosearch').count()
 			status_counts['negative'] = cases.filter(status='negative').count()
 			# Quotation and pending_assignment if present
 			status_counts['quotation'] = cases.filter(status='quotation').count()
@@ -291,6 +294,7 @@ def view_cases(request):
 		status_counts['draft'] = all_cases_qs.filter(status='draft').count()
 		status_counts['positive'] = all_cases_qs.filter(status='positive').count()
 		status_counts['positive_subject_tosearch'] = all_cases_qs.filter(status='positive_subject_tosearch').count()
+		status_counts['draft_positive_subject_tosearch'] = all_cases_qs.filter(status='draft_positive_subject_tosearch').count()
 		status_counts['negative'] = all_cases_qs.filter(status='negative').count()
 		status_counts['quotation'] = all_cases_qs.filter(status='quotation').count()
 		status_counts['pending_assignment'] = all_cases_qs.filter(status='pending_assignment').count()
@@ -304,6 +308,8 @@ def view_cases(request):
 		'draft_buckets': draft_buckets,
 		'active_buckets': active_buckets,
 		'completed_positive_buckets': completed_positive_buckets,
+		'completed_pss_buckets': completed_pss_buckets,
+		'completed_draft_pss_buckets': completed_draft_pss_buckets,
 		'completed_negative_buckets': completed_negative_buckets,
 		# Include SRO document pending cases
 		# Admin: show all; Advocate: show only those assigned to them (parents or children)
@@ -641,18 +647,21 @@ def sro_case_detail(request, case_id):
 		messages.info(request, f"Viewing parent case. The requested case ({case.case_number}) is a linked property case shown below.")
 		return redirect('sro_case_detail', case_id=case.parent_case.id)
 	
-	# Verify user is SRO
+	# Verify user is SRO or Admin
+	is_admin = request.user.is_superuser or request.user.groups.filter(name__in=['ADMIN', 'CO-ADMIN']).exists()
+	
 	try:
 		employee = get_user_employee(request.user)
-		if not employee or employee.employee_type != 'sro':
+		if not is_admin and (not employee or employee.employee_type != 'sro'):
 			messages.error(request, "Access denied. This page is only for SRO users.")
 			return redirect('dashboard')
 	except Exception:
-		messages.error(request, "Access denied.")
-		return redirect('dashboard')
+		if not is_admin:
+			messages.error(request, "Access denied.")
+			return redirect('dashboard')
 	
-	# Check if case is in SRO's allowed districts
-	if case.district and employee.allowed_districts.exists():
+	# Check if case is in SRO's allowed districts (skip for admins)
+	if not is_admin and case.district and employee and employee.allowed_districts.exists():
 		if not employee.allowed_districts.filter(id=case.district.id).exists():
 			messages.error(request, "You don't have permission to view this case (district restriction).")
 			return redirect('sro_dashboard')
@@ -934,16 +943,22 @@ def case_action(request, case_id):
 			# Additional property creation moved to a dedicated step post-finalization
 
 			# Enforce: final actions require that core work fields are completed
-			if action in ['positive', 'positive_subject_tosearch', 'negative'] and not case.has_complete_details():
+			if action in ['positive', 'positive_subject_tosearch', 'draft_positive_subject_tosearch', 'negative'] and not case.has_complete_details():
 				messages.error(request, 'Please complete case details (Address, State, District, Tehsil, Branch) before finalizing.')
 				return redirect('work_on_case', case_id=case.id)
 
 			# Map actions to statuses (on_hold removed from this form; handled separately)
 			if action == 'positive_subject_tosearch':
 				case.status = 'positive_subject_tosearch'
-				case.forwarded_to_sro = True  # auto forwardonl
+				case.forwarded_to_sro = True  # auto forward
 				case.completed_at = timezone.now()
 				case.generate_legal_reference_number()
+			elif action == 'draft_positive_subject_tosearch':
+				case.status = 'draft_positive_subject_tosearch'
+				case.completed_at = timezone.now()
+				case.generate_legal_reference_number()
+				if forward:
+					case.forwarded_to_sro = True
 			elif action == 'positive':
 				case.status = 'positive'
 				case.completed_at = timezone.now()
@@ -986,7 +1001,7 @@ def case_action(request, case_id):
 			CaseUpdate.objects.create(case=case, action=action, remark=remark)
 			messages.success(request, f'Case updated to {case.get_status_display()}')
 			# For final statuses, redirect to mandatory document upload step (individual upload only)
-			if case.status in ['positive', 'positive_subject_tosearch', 'negative']:
+			if case.status in ['positive', 'positive_subject_tosearch', 'draft_positive_subject_tosearch', 'negative']:
 				return redirect('case_upload_document', case_id=case.id)
 			return redirect('case_detail', case_id=case.id)
 	else:
@@ -1011,7 +1026,7 @@ def case_upload_document(request, case_id):
 		messages.error(request, "You don't have permission to upload for this case.")
 		return redirect('view_cases')
 	# Allow upload after SRO receipt when returned to advocate
-	if case.status not in ['positive', 'positive_subject_tosearch', 'negative', 'document_pending', 'sro_document_pending']:
+	if case.status not in ['positive', 'positive_subject_tosearch', 'draft_positive_subject_tosearch', 'negative', 'document_pending', 'sro_document_pending']:
 		messages.info(request, 'Document upload is only required after SRO receipt or after finalizing the case.')
 		return redirect('case_detail', case_id=case.id)
 	# Ensure LRN exists
@@ -1392,6 +1407,48 @@ def case_reopen(request, case_id):
 		pass
 	messages.success(request, 'Case reopened. LRN unchanged.')
 	return redirect('case_detail', case_id=case.id)
+
+
+@admin_required
+def admin_change_case_status(request, case_id):
+	"""Admin-only view to change case status directly."""
+	case = get_object_or_404(Case, id=case_id)
+	
+	if request.method == 'POST':
+		new_status = request.POST.get('status')
+		remark = request.POST.get('remark', '').strip()
+		
+		if not new_status:
+			messages.error(request, 'Please select a status.')
+			return render(request, 'cases/admin_change_status.html', {'case': case})
+		
+		old_status = case.status
+		case.status = new_status
+		
+		# Handle completed_at for final statuses
+		if new_status in ['positive', 'positive_subject_tosearch', 'negative']:
+			if not case.completed_at:
+				case.completed_at = timezone.now()
+			# Generate LRN if missing
+			if not case.legal_reference_number:
+				case.generate_legal_reference_number()
+		else:
+			# Clear completed_at for non-final statuses
+			case.completed_at = None
+		
+		case.save()
+		
+		# Create update record
+		try:
+			remark_text = remark or f'Status changed from {old_status} to {new_status} by admin'
+			CaseUpdate.objects.create(case=case, action=new_status, remark=remark_text)
+		except Exception:
+			pass
+		
+		messages.success(request, f'Case status changed from {old_status} to {new_status}.')
+		return redirect('case_detail', case_id=case.id)
+	
+	return render(request, 'cases/admin_change_status.html', {'case': case})
 
 
 @admin_required

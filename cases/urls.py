@@ -24,6 +24,7 @@ urlpatterns = [
     path('case-finalize-as-draft/<int:case_id>/', views.case_finalize_as_draft, name='case_finalize_as_draft'),
     path('case-finalize-as-query/<int:case_id>/', views.case_finalize_as_query, name='case_finalize_as_query'),
     path('case-reopen/<int:case_id>/', views.case_reopen, name='case_reopen'),
+    path('admin-change-status/<int:case_id>/', views.admin_change_case_status, name='admin_change_case_status'),
     path('post-finalize/<int:case_id>/', views.post_finalize_options, name='post_finalize_options'),
     path('add-child-case/<int:case_id>/', views.add_child_case, name='add_child_case'),
     path('delete-case/<int:case_id>/', views.delete_case, name='delete_case'),
