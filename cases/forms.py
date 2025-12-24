@@ -508,34 +508,19 @@ class CaseDetailsForm(forms.ModelForm):
             state_choices = [(inst.state, inst.state)] + state_choices
         self.fields['state'].choices = [('', 'Select State')] + state_choices
 
-        # Limit branch choices to the branches of the case's bank
+        # Show all branches of the case's bank (not filtered by state)
         instance = kwargs.get('instance') or getattr(self, 'instance', None)
         case_bank = getattr(instance, 'bank', None) if instance else None
         if case_bank is not None:
-            # Determine chosen state from POST data (preferred) or instance
-            selected_state_name = None
-            if self.is_bound:
-                selected_state_name = (self.data.get('state') or '').strip() or None
-            if not selected_state_name and getattr(instance, 'state', None):
-                selected_state_name = instance.state
-            if selected_state_name:
-                sel = (selected_state_name or '').strip()
-                self.fields['branch'].queryset = BankBranch.objects.filter(bank=case_bank, state__name__iexact=sel)
-            else:
-                self.fields['branch'].queryset = BankBranch.objects.filter(bank=case_bank)
+            # Display all branches for this bank regardless of state
+            self.fields['branch'].queryset = BankBranch.objects.filter(bank=case_bank).order_by('state__name', 'name')
         else:
             self.fields['branch'].queryset = BankBranch.objects.none()
     def save(self, commit=True):
         instance = super().save(commit=False)
         # Persist school case flag
         instance.is_school_case = bool(self.cleaned_data.get('is_school_case'))
-        # Safety: ensure branch selected matches chosen state
-        sel_branch = self.cleaned_data.get('branch')
-        sel_state = self.cleaned_data.get('state')
-        if sel_branch and sel_state and sel_branch.state and sel_branch.state.name != sel_state:
-            # Invalidate branch selection if mismatch
-            self.add_error('branch', 'Selected branch does not belong to the chosen state.')
-            raise forms.ValidationError('Branch/state mismatch.')
+        # Note: Branch can now be from any state, not restricted to case's state
         if commit:
             instance.save()
         return instance
@@ -606,16 +591,8 @@ class ChildCaseForm(forms.Form):
         self.fields['state'].choices = [('', 'Select State')] + state_choices
 
         if parent_case and parent_case.bank_id:
-            # Determine selected state (POST preferred, else parent state)
-            selected_state = None
-            if self.is_bound:
-                selected_state = (self.data.get('state') or '').strip() or None
-            if not selected_state and getattr(parent_case, 'state', None):
-                selected_state = parent_case.state
-            if selected_state:
-                self.fields['branch'].queryset = BankBranch.objects.filter(bank=parent_case.bank, state__name__iexact=selected_state)
-            else:
-                self.fields['branch'].queryset = BankBranch.objects.filter(bank=parent_case.bank)
+            # Display all branches for parent's bank regardless of state
+            self.fields['branch'].queryset = BankBranch.objects.filter(bank=parent_case.bank).order_by('state__name', 'name')
         # Preselect parent's values for convenience
         if parent_case:
             if parent_case.state:

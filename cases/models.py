@@ -116,7 +116,7 @@ class Case(models.Model):
 
 	# Basic Case Information
 	applicant_name = models.CharField(max_length=200)
-	case_number = models.CharField(max_length=100, unique=True)
+	case_number = models.CharField(max_length=100)
 	bank = models.ForeignKey(ExternalBank, on_delete=models.PROTECT, related_name='cases')
 	case_type = models.ForeignKey(CaseType, on_delete=models.PROTECT, related_name='cases')
 	
@@ -269,6 +269,7 @@ class Case(models.Model):
 	class Meta:
 		verbose_name = "Case"
 		verbose_name_plural = "Cases"
+		unique_together = [['case_number', 'case_type']]
 
 
 ## CaseCharge removed (legacy extra charges application deprecated)

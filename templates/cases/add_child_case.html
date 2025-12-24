@@ -119,34 +119,8 @@
   stateSel.addEventListener('change', loadDistricts);
   districtSel.addEventListener('change', loadTehsils);
 
-  // Branch filtering by selected state (client-side safety; server already narrows queryset)
-  const branchSel = document.getElementById('id_branch');
-  const originalBranchOptions = branchSel ? Array.from(branchSel.options).map(o => ({value:o.value, text:o.text})) : [];
-  function filterBranches(){
-    if(!branchSel) return;
-    const st = (stateSel.value || '').trim().toLowerCase();
-    const current = branchSel.value;
-    while(branchSel.options.length) branchSel.remove(0);
-    originalBranchOptions.forEach(({value,text})=>{
-      // Infer state from text pattern "Name (Bank, State)" or dashes
-      let inferred = null;
-      const paren = text.match(/\(([^)]+)\)\s*$/);
-      if(paren && paren[1]){
-        const parts = paren[1].split(',');
-        inferred = (parts[parts.length-1]||'').trim().toLowerCase();
-      } else {
-        const emdash = text.match(/—\s*(.*)$/);
-        const dash = text.match(/-\s*(.*)$/);
-        inferred = (emdash && emdash[1] || dash && dash[1] || '').trim().toLowerCase() || null;
-      }
-      if(!st || !inferred || inferred === st){
-        const opt = document.createElement('option');
-        opt.value = value; opt.textContent = text; branchSel.appendChild(opt);
-      }
-    });
-    if(Array.from(branchSel.options).some(o=>o.value===current)) branchSel.value = current;
-  }
-  if(branchSel){ filterBranches(); stateSel.addEventListener('change', filterBranches); }
+  // Branch filtering removed: now showing all branches regardless of state selection
+  // Branches are already filtered by bank in the form, no need for state-based filtering
 
   // Initial population if state already chosen
   if (stateSel.value){ loadDistricts(); }

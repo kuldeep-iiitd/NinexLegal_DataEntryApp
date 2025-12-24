@@ -239,46 +239,8 @@ function addAddressField(){
   stateSel.addEventListener('change', loadDistricts);
   districtSel.addEventListener('change', loadTehsils);
 
-  // Client-side branch filtering by selected state
-  const originalBranchOptions = branchSel ? Array.from(branchSel.options).map(o=>({value:o.value,text:o.text})) : [];
-  function filterBranches(){
-    if(!branchSel) return;
-    const st = stateSel.value;
-    const selectedVal = branchSel.value;
-    while(branchSel.options.length) branchSel.remove(0);
-    originalBranchOptions.forEach(({value,text})=>{
-      // Expect option text like "Branch Name" or "Branch Name"; we don't control text format including state
-      // Use data-state attribute if present else include all, server already narrows queryset by state when available.
-      const opt = document.createElement('option');
-      opt.value = value; opt.textContent = text; branchSel.appendChild(opt);
-    });
-    // If server has already pre-filtered by state, this will simply keep the list as-is.
-    // Otherwise, we can optionally prune using a suffix pattern "(State)" if included in text.
-    if(st){
-      const opts = Array.from(branchSel.options);
-      const want = st.trim().toLowerCase();
-      opts.forEach(opt=>{
-        // Try to infer state from option text like "Branch (Bank, State)" or "Branch — State" or "Branch - State"
-        const txt = (opt.text||'');
-        let inferred = null;
-        const paren = txt.match(/\(([^)]+)\)\s*$/);
-        if(paren && paren[1]){
-          // Take last segment after comma
-          const parts = paren[1].split(',');
-          inferred = parts[parts.length-1].trim().toLowerCase();
-        } else {
-          const emdash = txt.match(/—\s*(.*)$/);
-          const dash = txt.match(/-\s*(.*)$/);
-          inferred = (emdash && emdash[1] || dash && dash[1] || '').trim().toLowerCase() || null;
-        }
-        if(inferred && inferred !== want){ opt.remove(); }
-      });
-    }
-    // restore selection if still present
-    const found = Array.from(branchSel.options).some(o=>o.value===selectedVal);
-    if(found) branchSel.value = selectedVal;
-  }
-  if(branchSel){ filterBranches(); stateSel.addEventListener('change', filterBranches); }
+  // Branch filtering removed: now showing all branches regardless of state selection
+  // Branches are already filtered by bank in the form, no need for state-based filtering
 })();
 </script>
 {% endblock %}
