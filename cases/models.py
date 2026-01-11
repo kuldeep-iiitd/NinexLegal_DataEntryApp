@@ -112,6 +112,7 @@ class Case(models.Model):
 		('draft_positive_subject_tosearch', 'Draft Positive Subject to Search'),
 		('pending_assignment', 'Pending Assignment'),
 		('pending', 'Pending'),
+		('done', 'Done'),
 	]
 
 	# Basic Case Information
@@ -125,6 +126,7 @@ class Case(models.Model):
 	
 	# Assignment Information
 	assigned_advocate = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name='assigned_cases', blank=True, null=True, limit_choices_to={'employee_type': 'advocate'})
+	assigned_sro = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name='assigned_sro_cases', blank=True, null=True, limit_choices_to={'employee_type': 'sro'})
 	
 	# Status and Tracking
 	status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')

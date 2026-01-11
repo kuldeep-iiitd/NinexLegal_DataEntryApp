@@ -216,11 +216,45 @@
                                 {% if form.assigned_advocate.errors %}
                                     <p class="text-red-300 text-sm mt-2">{{ form.assigned_advocate.errors.0 }}</p>
                                 {% endif %}
+                                
                                 <div class="bg-blue-500/30 border-l-4 border-blue-300 p-4 rounded-r-lg">
                                     <div class="flex items-center">
                                         <i class="fas fa-info-circle text-blue-100 mr-2"></i>
-                                        <p class="text-white text-sm">Since documents are present, you can assign an advocate immediately.</p>
+                                        <p class="text-white text-sm" id="assignmentInfo">Since documents are present, you can assign an advocate immediately.</p>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SRO Selection (shows for BT/Transaction cases) -->
+                    <div id="sroSelectionDiv" style="display: none;" class="space-y-6 mb-8">
+                        <div class="border-l-4 border-cyan-300 pl-4">
+                            <h3 class="text-xl font-semibold text-white flex items-center">
+                                <i class="fas fa-user-tie mr-2"></i>
+                                SRO Assignment (BT/Transaction Cases)
+                            </h3>
+                        </div>
+                        
+                        <div class="bg-white/15 rounded-xl p-6 border border-white/30">
+                            <label for="{{ form.assigned_sro.id_for_label }}" class="block text-white font-semibold flex items-center mb-2">
+                                <i class="fas fa-user-tie mr-2 text-cyan-300"></i>
+                                Select SRO <span class="text-red-300">*</span>
+                            </label>
+                            <select name="{{ form.assigned_sro.name }}" id="{{ form.assigned_sro.id_for_label }}" class="form-control">
+                                <option value="">Select an SRO</option>
+                                {% for sro in form.assigned_sro.field.queryset %}
+                                    <option value="{{ sro.pk }}" {% if form.assigned_sro.value == sro.pk|stringformat:"s" %}selected{% endif %}>{{ sro.name }} ({{ sro.employee_id }})</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.assigned_sro.errors %}
+                                <p class="text-red-300 text-sm mt-2">{{ form.assigned_sro.errors.0 }}</p>
+                            {% endif %}
+                            
+                            <div class="bg-cyan-500/30 border-l-4 border-cyan-300 p-4 rounded-r-lg mt-4">
+                                <div class="flex items-center">
+                                    <i class="fas fa-info-circle text-cyan-100 mr-2"></i>
+                                    <p class="text-white text-sm">For BT/Transaction cases, both Advocate and SRO must be assigned. Case will be forwarded to SRO dashboard for receipt upload.</p>
                                 </div>
                             </div>
                         </div>
@@ -318,31 +352,54 @@ document.addEventListener('DOMContentLoaded', function() {
     const quotationCheckbox = document.getElementById('{{ form.is_quotation.id_for_label }}');
     const quotationPriceWrapper = document.getElementById('quotationPriceWrapper');
     const quotationPriceInput = document.getElementById('{{ form.quotation_price.id_for_label }}');
-
     const assignToAdminCheckbox = document.getElementById('{{ form.assign_to_admin.id_for_label }}');
+    const sroSelectionDiv = document.getElementById('sroSelectionDiv');
 
     function hasAdvocateSelected(){
         return advocateSelect && advocateSelect.value && advocateSelect.value !== '';
     }
+    
+    // Handle BT/Transaction case types
+    function checkCaseType() {
+        if (!caseTypeSelect || !sroSelectionDiv) return;
+        
+        const selectedText = caseTypeSelect.options[caseTypeSelect.selectedIndex]?.text || '';
+        const isBTTransaction = selectedText.includes('BT') || selectedText.includes('Transaction');
+        const docsChecked = documentsCheckbox && documentsCheckbox.checked;
+        
+        if (isBTTransaction && docsChecked) {
+            sroSelectionDiv.style.display = 'block';
+        } else {
+            sroSelectionDiv.style.display = 'none';
+        }
+    }
 
     function toggleAdvocateSection() {
+        if (!documentsCheckbox || !advocateSection || !noDocumentsInfo) return;
+        
         const assigningToAdmin = assignToAdminCheckbox && assignToAdminCheckbox.checked;
-        const showAdvocatePick = !quotationCheckbox.checked && !assigningToAdmin;
-        if (showAdvocatePick && documentsCheckbox.checked) {
+        const isQuotation = quotationCheckbox && quotationCheckbox.checked;
+        const showAdvocatePick = !isQuotation && !assigningToAdmin && documentsCheckbox.checked;
+        
+        if (showAdvocatePick) {
             advocateSection.classList.remove('hidden');
             noDocumentsInfo.classList.add('hidden');
-            advocateSelect.required = true;
+            if (advocateSelect) advocateSelect.required = true;
         } else {
             advocateSection.classList.add('hidden');
-            // Hide the info if either assigning to admin or an advocate is chosen while not a quotation
-            if (!quotationCheckbox.checked && (assigningToAdmin || hasAdvocateSelected())) {
-                noDocumentsInfo.classList.add('hidden');
-            } else {
-                noDocumentsInfo.classList.remove('hidden');
+            if (advocateSelect) {
+                advocateSelect.required = false;
+                advocateSelect.value = '';
             }
-            advocateSelect.required = false;
-            advocateSelect.value = '';
+            // Show no documents info unless quotation or assigning to admin
+            if (!isQuotation && !assigningToAdmin) {
+                noDocumentsInfo.classList.remove('hidden');
+            } else {
+                noDocumentsInfo.classList.add('hidden');
+            }
         }
+        // Also check case type for BT/Transaction after advocate section is toggled
+        checkCaseType();
     }
 
     function toggleQuotation() {
@@ -362,11 +419,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Add event listeners
     documentsCheckbox.addEventListener('change', toggleAdvocateSection);
     if (assignToAdminCheckbox) assignToAdminCheckbox.addEventListener('change', toggleAdvocateSection);
     quotationCheckbox.addEventListener('change', toggleQuotation);
-    toggleAdvocateSection(); // Initial call
+    if (caseTypeSelect) caseTypeSelect.addEventListener('change', checkCaseType);
+    
+    // Initial calls to set correct visibility on page load
     toggleQuotation();
+    toggleAdvocateSection();
 });
 </script>
 {% endblock %}

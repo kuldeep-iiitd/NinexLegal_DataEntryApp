@@ -1,0 +1,150 @@
+{% extends 'accounts/admin_base.html' %}
+{% load static %}
+
+{% block title %}Confirm Case Creation{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto p-8">
+    <!-- Warning Header -->
+    <div class="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl shadow-2xl p-6 mb-6">
+        <div class="flex items-center">
+            <div class="bg-white rounded-full p-4 mr-4">
+                <i class="fas fa-exclamation-triangle text-yellow-600 text-3xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-white mb-1">
+                    Potential Duplicate Cases Found
+                </h1>
+                <p class="text-white/90">
+                    We found {{ potential_matches|length }} case(s) that may match the case you're trying to create. Please review them before proceeding.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- New Case Details -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
+                <h2 class="text-xl font-bold text-white flex items-center">
+                    <i class="fas fa-file-plus mr-2"></i>
+                    New Case to Create
+                </h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs text-gray-600 mb-1">Applicant Name</p>
+                            <p class="font-bold text-gray-800">{{ form.applicant_name.value }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600 mb-1">Case Number</p>
+                            <p class="font-bold text-gray-800">{{ form.case_number.value }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600 mb-1">Bank/NBFC</p>
+                            <p class="font-bold text-gray-800">{{ form.bank.value }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600 mb-1">Case Type</p>
+                            <p class="font-bold text-gray-800">{{ form.case_type.value }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-200">
+                    <p class="text-sm text-gray-600 mb-4">
+                        <i class="fas fa-info-circle mr-2 text-blue-600"></i>
+                        Review the potential matches below. If you're sure this is a new case, click "Proceed with Creation".
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matching Cases -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-orange-600 to-red-600 px-6 py-4">
+                <h2 class="text-xl font-bold text-white flex items-center">
+                    <i class="fas fa-copy mr-2"></i>
+                    Potential Matches ({{ potential_matches|length }})
+                </h2>
+            </div>
+            <div class="p-4 max-h-[600px] overflow-y-auto">
+                {% for match in potential_matches %}
+                <div class="mb-3 bg-orange-50 rounded-lg p-4 border-2 border-orange-200 hover:bg-orange-100 transition-colors">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-3 py-1 rounded-full text-xs font-bold {% if match.status == 'positive' %}bg-green-600 text-white{% elif match.status == 'negative' %}bg-red-600 text-white{% elif match.status == 'pending' %}bg-yellow-600 text-white{% else %}bg-blue-600 text-white{% endif %}">
+                                    {{ match.get_status_display }}
+                                </span>
+                                {% if match.legal_reference_number %}
+                                <span class="text-xs text-gray-600">LRN: {{ match.legal_reference_number }}</span>
+                                {% endif %}
+                            </div>
+                            <p class="font-bold text-gray-800 text-lg">{{ match.applicant_name }}</p>
+                        </div>
+                        <a href="{% url 'case_detail' match.id %}" target="_blank" class="text-blue-600 hover:text-blue-700 text-sm font-semibold">
+                            <i class="fas fa-external-link-alt mr-1"></i>View
+                        </a>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <p class="text-xs text-gray-600">Case Number</p>
+                            <p class="font-semibold text-gray-800">{{ match.case_number }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600">Bank</p>
+                            <p class="font-semibold text-gray-800">{{ match.bank.name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600">Case Type</p>
+                            <p class="font-semibold text-gray-800">{{ match.case_type.name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600">Created</p>
+                            <p class="font-semibold text-gray-800">{{ match.created_at|date:"M d, Y" }}</p>
+                        </div>
+                        {% if match.assigned_advocate %}
+                        <div class="col-span-2">
+                            <p class="text-xs text-gray-600">Advocate</p>
+                            <p class="font-semibold text-gray-800">{{ match.assigned_advocate.name }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mt-6 bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between">
+            <div class="flex-1 mr-6">
+                <p class="text-gray-700 font-semibold mb-2">What would you like to do?</p>
+                <p class="text-sm text-gray-600">
+                    If this is genuinely a new case despite the matches above, proceed with creation. Otherwise, cancel and use the existing case.
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'create_case' %}" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-all">
+                    <i class="fas fa-times mr-2"></i>Cancel
+                </a>
+                <form method="post" action="{% url 'create_case' %}" class="inline">
+                    {% csrf_token %}
+                    {% for key, value in form_data.items %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endfor %}
+                    <input type="hidden" name="confirm_create" value="yes">
+                    <button type="submit" class="px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold rounded-lg transition-all shadow-lg">
+                        <i class="fas fa-check mr-2"></i>Proceed with Creation
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

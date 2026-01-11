@@ -1,0 +1,205 @@
+{% extends 'accounts/admin_base.html' %}
+{% load static %}
+{% block title %}Edit Case Information - {{ case.case_number }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+  <!-- Header -->
+  <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+          <i class="fas fa-edit text-blue-600 mr-3"></i>
+          Edit Case Information
+        </h1>
+        <p class="text-gray-600 mt-2">Case: {{ case.case_number }} | LRN: {{ case.legal_reference_number|default:"Not assigned" }}</p>
+      </div>
+      <a href="{% url 'case_detail' case.id %}" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-all">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Case
+      </a>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Form Section -->
+    <div class="lg:col-span-2">
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
+          <h2 class="text-xl font-bold text-white flex items-center">
+            <i class="fas fa-info-circle mr-2"></i>
+            Case Information
+          </h2>
+        </div>
+        <div class="p-6">
+          <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if messages %}
+            <div class="space-y-2">
+              {% for message in messages %}
+              <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-100 text-red-800 border border-red-200{% else %}bg-blue-100 text-blue-800 border border-blue-200{% endif %}">
+                <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} mr-2"></i>
+                {{ message }}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Applicant Name -->
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">
+                <i class="fas fa-user mr-2 text-blue-600"></i>{{ form.applicant_name.label }}
+              </label>
+              {{ form.applicant_name }}
+              {% if form.applicant_name.errors %}
+              <p class="text-red-600 text-sm mt-1">{{ form.applicant_name.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Case Number -->
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">
+                <i class="fas fa-file-alt mr-2 text-blue-600"></i>{{ form.case_number.label }}
+              </label>
+              {{ form.case_number }}
+              {% if form.case_number.errors %}
+              <p class="text-red-600 text-sm mt-1">{{ form.case_number.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Bank/NBFC -->
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">
+                <i class="fas fa-building mr-2 text-blue-600"></i>{{ form.bank.label }}
+              </label>
+              {{ form.bank }}
+              {% if form.bank.errors %}
+              <p class="text-red-600 text-sm mt-1">{{ form.bank.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Case Type -->
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">
+                <i class="fas fa-tags mr-2 text-blue-600"></i>{{ form.case_type.label }}
+              </label>
+              {{ form.case_type }}
+              {% if form.case_type.errors %}
+              <p class="text-red-600 text-sm mt-1">{{ form.case_type.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex gap-3 pt-4 border-t border-gray-200">
+              <button type="submit" class="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg">
+                <i class="fas fa-save mr-2"></i>Save Changes
+              </button>
+              <a href="{% url 'case_detail' case.id %}" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-all">
+                Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documents Section -->
+    <div class="lg:col-span-1">
+      <!-- Upload New Document -->
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+        <div class="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-4">
+          <h2 class="text-xl font-bold text-white flex items-center">
+            <i class="fas fa-upload mr-2"></i>
+            Upload Document
+          </h2>
+        </div>
+        <div class="p-6">
+          <form method="post" enctype="multipart/form-data" class="space-y-4" id="uploadForm">
+            {% csrf_token %}
+            
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">Document Type</label>
+              <select name="document_type" id="documentType" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-green-500 focus:outline-none" onchange="toggleDocumentTitle()">
+                <option value="additional">Additional Document</option>
+                <option value="main">Main Document</option>
+              </select>
+            </div>
+
+            <div id="documentTitleDiv" style="display: block;">
+              <label class="block text-sm font-bold text-gray-700 mb-2">Document Title/Name</label>
+              <input type="text" name="document_title" id="documentTitle" placeholder="e.g., Bank Statement, NOC, etc." class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-green-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2">Select File</label>
+              <input type="file" name="document" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-green-500 focus:outline-none">
+            </div>
+
+            <button type="submit" class="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg">
+              <i class="fas fa-upload mr-2"></i>Upload
+            </button>
+          </form>
+        </div>
+        
+        <script>
+          function toggleDocumentTitle() {
+            const docType = document.getElementById('documentType').value;
+            const titleDiv = document.getElementById('documentTitleDiv');
+            const titleInput = document.getElementById('documentTitle');
+            
+            if (docType === 'additional') {
+              titleDiv.style.display = 'block';
+              titleInput.required = true;
+            } else {
+              titleDiv.style.display = 'none';
+              titleInput.required = false;
+            }
+          }
+          
+          // Initialize on page load
+          toggleDocumentTitle();
+        </script>
+      </div>
+
+      <!-- Existing Documents -->
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
+          <h2 class="text-xl font-bold text-white flex items-center">
+            <i class="fas fa-folder-open mr-2"></i>
+            Documents ({{ documents.count }})
+          </h2>
+        </div>
+        <div class="p-4">
+          {% if documents %}
+          <div class="space-y-3 max-h-96 overflow-y-auto">
+            {% for doc in documents %}
+            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:bg-gray-100 transition-colors">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <i class="fas fa-file-pdf text-red-500"></i>
+                    <span class="font-semibold text-sm text-gray-800">{{ doc.get_document_type_display }}</span>
+                  </div>
+                  <p class="text-xs text-gray-600 mb-2">
+                    Uploaded: {{ doc.uploaded_at|date:"M d, Y h:i A" }}
+                  </p>
+                  <a href="{{ doc.document.url }}" target="_blank" class="inline-flex items-center text-blue-600 hover:text-blue-700 text-sm font-semibold">
+                    <i class="fas fa-download mr-1"></i>Download
+                  </a>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-8">
+            <i class="fas fa-inbox text-gray-300 text-4xl mb-3"></i>
+            <p class="text-gray-500">No documents uploaded yet</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

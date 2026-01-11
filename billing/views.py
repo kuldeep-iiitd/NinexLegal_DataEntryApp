@@ -348,7 +348,7 @@ def mis_view(request):
     # Base queryset (include both root and child cases)
     qs = (
         Case.objects.select_related('bank', 'branch', 'employee', 'assigned_advocate', 'case_type')
-        .order_by('-created_at')
+        .order_by('created_at')  # Ascending order: oldest cases first
     )
 
     if start_date:
@@ -412,8 +412,8 @@ def mis_view(request):
         resp['Content-Disposition'] = f'attachment; filename="MIS_Report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
         writer = csv.writer(resp)
         writer.writerow([
-            'S.No', 'DATE', 'BANK/NBFC', 'Branch', 'LRN No', 'FILE NO/LOAN NO',
-            'APPLICANT NAME', 'Advocate Name', 'STATUS', 'Year', 'Receipt Number', 'Completed At'
+            'S.NO', 'DATE', 'BANK/NBFC', 'BRANCH', 'BRANCH CODE', 'APPLICANT NAME', 
+            'CASE NUMBER', 'LRN NUMBER', 'RECEIPT NUMBER', 'CASE TYPE', 'State', 'Case Status'
         ])
         for i, c in enumerate(qs, start=1):
             # Resolve state label: prefer case.state string; else branch.state.name
@@ -421,41 +421,61 @@ def mis_view(request):
                 state_label = c.state or (c.branch.state.name if c.branch_id and c.branch and c.branch.state_id else '')
             except Exception:
                 state_label = c.state or ''
+            
+            # Get branch code
+            branch_code = ''
+            if c.branch_id and c.branch:
+                branch_code = getattr(c.branch, 'branch_code', '') or ''
+            
+            # Case type: show "Legal" if HL or LAP, otherwise actual case type
+            case_type_display = 'Legal' if c.case_type_id and c.case_type.name in ['HL', 'LAP'] else (c.case_type.name if c.case_type_id else '')
+            
             writer.writerow([
                 i,
                 (c.created_at.date() if c.created_at else ''),
                 (c.bank.name if c.bank_id else ''),
                 (c.branch.name if c.branch_id else ''),
-                (c.legal_reference_number or ''),
-                c.case_number,
+                branch_code,
                 (c.applicant_name or ''),
-                (c.assigned_advocate.name if c.assigned_advocate_id else ''),
-                (c.get_status_display() if hasattr(c, 'get_status_display') else c.status),
-                fy_str(c.created_at.date() if c.created_at else None),
+                c.case_number,
+                (c.legal_reference_number or ''),
                 (c.receipt_number or ''),
-                (c.completed_at.date() if c.completed_at else ''),
+                case_type_display,
+                state_label,
+                (c.get_status_display() if hasattr(c, 'get_status_display') else c.status),
             ])
         return resp
 
-    # For HTML, build a light list with computed FY (avoid heavy template logic)
+    # For HTML, build a light list with computed fields (avoid heavy template logic)
     rows = []
     for c in qs[:1000]:  # cap for UI; CSV gives full
+        # Resolve state label: prefer case.state string; else branch.state.name
+        try:
+            state_label = c.state or (c.branch.state.name if c.branch_id and c.branch and c.branch.state_id else '')
+        except Exception:
+            state_label = c.state or ''
+        
+        # Get branch code
+        branch_code = ''
+        if c.branch_id and c.branch:
+            branch_code = getattr(c.branch, 'branch_code', '') or ''
+        
+        # Case type: show "Legal" if HL or LAP, otherwise actual case type
+        case_type_display = 'Legal' if c.case_type_id and c.case_type.name in ['HL', 'LAP'] else (c.case_type.name if c.case_type_id else '')
+        
         rows.append({
             'obj': c,
             'date': c.created_at.date() if c.created_at else None,
             'bank': c.bank.name if c.bank_id else '',
             'branch': c.branch.name if c.branch_id else '',
-            'lrn': c.legal_reference_number or '',
-            'file_no': c.case_number,
+            'branch_code': branch_code,
             'applicant': c.applicant_name or '',
-            'address': c.property_address or '',
-            'advocate': c.assigned_advocate.name if c.assigned_advocate_id else '',
-            'sro': c.employee.name if c.employee_id else '',
-            'status': c.get_status_display() if hasattr(c, 'get_status_display') else c.status,
-            'year': fy_str(c.created_at.date() if c.created_at else None),
+            'case_number': c.case_number,
+            'lrn': c.legal_reference_number or '',
             'receipt_number': c.receipt_number or '',
-            'completed_at': c.completed_at.date() if c.completed_at else None,
-            'case_type': c.case_type.name if c.case_type_id else '',
+            'case_type': case_type_display,
+            'state': state_label,
+            'status': c.get_status_display() if hasattr(c, 'get_status_display') else c.status,
         })
 
     # Scope branch dropdown to selected bank when mode=bank

@@ -104,14 +104,51 @@ def suggest_tehsils(request):
 @admin_required
 def create_case(request):
 	if request.method == 'POST':
+		# Check if this is a confirmation step (admin has already seen duplicates)
+		confirm_create = request.POST.get('confirm_create') == 'yes'
+		
 		form = CaseCreationForm(request.POST)
 		if form.is_valid():
+			# If not confirming, check for potential duplicates
+			if not confirm_create:
+				applicant_name = form.cleaned_data.get('applicant_name', '').strip()
+				case_number = form.cleaned_data.get('case_number', '').strip()
+				
+				# Search for potential duplicates
+				potential_matches = Case.objects.none()
+				if applicant_name or case_number:
+					q_filter = Q()
+					if applicant_name:
+						q_filter |= Q(applicant_name__icontains=applicant_name)
+					if case_number:
+						q_filter |= Q(case_number__icontains=case_number)
+					
+					potential_matches = Case.objects.filter(q_filter).select_related(
+						'bank', 'case_type', 'assigned_advocate'
+					).order_by('-created_at')[:10]  # Limit to 10 most recent matches
+				
+				# If duplicates found, show confirmation page
+				if potential_matches.exists():
+					# Store form data in session for later use
+					request.session['pending_case_data'] = request.POST.dict()
+					return render(request, 'cases/create_case_confirm.html', {
+						'form': form,
+						'potential_matches': potential_matches,
+						'form_data': request.POST.dict(),
+					})
+			
+			# No duplicates or admin confirmed - proceed with creation
 			case = form.save(commit=False)
 			# Generate number if blank
 			if not case.case_number:
 				timestamp = timezone.now().strftime('%y%m%d%H%M%S')
 				bank_code = case.bank.name[:3].upper()
 				case.case_number = f"{bank_code}-{timestamp}"
+			
+			# Check if this is a BT/Transaction case type
+			case_type_name = case.case_type.name if case.case_type else ''
+			is_bt_transaction = case_type_name in ['BT', 'Transaction', 'BT (Bank Transfer)']
+			
 			# Set status based on quotation / documents
 			if form.cleaned_data.get('is_quotation'):
 				case.is_quotation = True
@@ -119,6 +156,15 @@ def create_case(request):
 				case.quotation_price = form.cleaned_data.get('quotation_price')
 				case.documents_present = False
 				case.assigned_advocate = None
+			elif is_bt_transaction:
+				# Special handling for BT/Transaction cases
+				case.status = 'done'
+				case.documents_present = True
+				case.forwarded_to_sro = True
+				# Assign both advocate and SRO if provided
+				assigned_sro = form.cleaned_data.get('assigned_sro')
+				if assigned_sro:
+					case.assigned_sro = assigned_sro
 			else:
 				# Not a quotation
 				docs = form.cleaned_data.get('documents_present')
@@ -163,6 +209,10 @@ def create_case(request):
 			try:
 				if case.is_quotation or case.status == 'quotation':
 					remark_msg = f"Created as quotation. Quoted price={case.quotation_price}"
+				elif case.status == 'done':
+					advocate_name = case.assigned_advocate.name if case.assigned_advocate else 'N/A'
+					sro_name = case.assigned_sro.name if case.assigned_sro else 'N/A'
+					remark_msg = f"Created as {case_type_name} case. Advocate: {advocate_name}, SRO: {sro_name}"
 				elif case.assigned_advocate:
 					remark_msg = f"Created and assigned to {case.assigned_advocate.name}"
 				else:
@@ -172,10 +222,17 @@ def create_case(request):
 				pass
 			if case.status == 'quotation':
 				messages.success(request, f"Quotation case {case.case_number} created with quoted price {case.quotation_price}.")
+			elif case.status == 'done':
+				messages.success(request, f"{case_type_name} case {case.case_number} created and forwarded to SRO for receipt upload.")
 			elif case.assigned_advocate:
 				messages.success(request, f"Case {case.case_number} created and assigned to {case.assigned_advocate.name}.")
 			else:
 				messages.success(request, f"Case {case.case_number} created and queued for assignment.")
+			
+			# Clear session data if it exists
+			if 'pending_case_data' in request.session:
+				del request.session['pending_case_data']
+			
 			# Redirect back to create page for rapid entry
 			return redirect('create_case')
 	else:
@@ -1468,6 +1525,70 @@ def delete_case(request, case_id):
 	return render(request, 'cases/delete_case_confirm.html', {'case': case})
 
 
+@admin_required
+def edit_case_information(request, case_id):
+	"""Admin-only view to edit basic case information and manage documents"""
+	from .forms import EditCaseInformationForm
+	
+	case = get_object_or_404(Case, id=case_id)
+	
+	if request.method == 'POST':
+		form = EditCaseInformationForm(request.POST, instance=case)
+		
+		# Handle document upload
+		if 'document' in request.FILES:
+			document = request.FILES['document']
+			doc_type = request.POST.get('document_type', 'additional')
+			document_title = request.POST.get('document_title', '').strip()
+			
+			# For main document, check if one already exists and delete it
+			if doc_type == 'main':
+				# Delete existing main document if it exists
+				existing_main = CaseDocument.objects.filter(case=case, document_type='main')
+				if existing_main.exists():
+					existing_main.delete()
+					messages.info(request, 'Previous main document replaced.')
+				
+				CaseDocument.objects.create(
+					case=case,
+					document=document,
+					document_type='main',
+					uploaded_by=request.user
+				)
+				messages.success(request, 'Main document uploaded successfully.')
+			else:
+				# For additional documents, require a title
+				if not document_title:
+					messages.error(request, 'Please provide a title for the additional document.')
+				else:
+					final_doc_type = f"additional_{document_title}"
+					
+					CaseDocument.objects.create(
+						case=case,
+						document=document,
+						document_type=final_doc_type,
+						uploaded_by=request.user
+					)
+					messages.success(request, f'Additional document "{document_title}" uploaded successfully.')
+		
+		# Handle form submission
+		if form.is_valid():
+			form.save()
+			messages.success(request, 'Case information updated successfully.')
+			return redirect('case_detail', case_id=case.id)
+	else:
+		form = EditCaseInformationForm(instance=case)
+	
+	# Get all documents for this case
+	documents = CaseDocument.objects.filter(case=case).order_by('-uploaded_at')
+	
+	return render(request, 'cases/edit_case_information.html', {
+		'case': case,
+		'form': form,
+		'documents': documents,
+	})
+
+
 @advocate_or_admin_required
 def post_finalize_options(request, case_id):
 	"""After finalization and document upload, ask whether to add child cases one-by-one."""
@@ -1890,9 +2011,10 @@ def sro_dashboard(request):
 def sro_update_case(request, case_id):
 	"""Allow SRO to upload receipt and mark case Positive (if appropriate)."""
 	case = get_object_or_404(Case, id=case_id)
-	# Enforce SRO scoping for non-super SROs
+	# Enforce SRO scoping for non-super SROs (skip for BT/Transaction as location may not be filled yet)
 	user_emp = getattr(request.user, 'employee', None)
-	if user_emp and user_emp.employee_type == Employee.SRO and not user_emp.is_super_sro:
+	is_bt_transaction = case.case_type and ('BT' in case.case_type.name or 'Transaction' in case.case_type.name)
+	if user_emp and user_emp.employee_type == Employee.SRO and not user_emp.is_super_sro and not is_bt_transaction:
 		allowed = (
 			user_emp.allowed_states.filter(name__iexact=case.state).exists() or
 			user_emp.allowed_districts.filter(name__iexact=case.district).exists() or
@@ -1934,18 +2056,29 @@ def sro_update_case(request, case_id):
 				description=description,
 				is_receipt=True
 			)
-			# Update case fields: capture receipt, but send back to advocate for final doc upload
+			# Update case fields
 			case.receipt_number = form.cleaned_data.get('receipt_number') or case.receipt_number
 			case.receipt_amount = form.cleaned_data.get('receipt_amount')
 			case.receipt_expense = form.cleaned_data.get('receipt_expense')
-			# New flow: not finalizing; request document upload by advocate (SRO-specific pending)
-			case.status = 'sro_document_pending'
-			case.forwarded_to_sro = False
-			case.completed_at = None
-			case.save()
-			# Do not mirror status to children; children remain independent
-			CaseUpdate.objects.create(case=case, action='sro_update', remark=f"SRO uploaded receipt; sent back to advocate. Amount={case.receipt_amount} | ReceiptNo={case.receipt_number or '-'}")
-			messages.success(request, 'Receipt uploaded. Case returned to Advocate for document upload.')
+			
+			# Special handling for BT/Transaction cases
+			if case.case_type and ('BT' in case.case_type.name or 'Transaction' in case.case_type.name):
+				# Generate LRN, set status to 'done', and mark as completed
+				case.generate_legal_reference_number()
+				case.status = 'done'
+				case.completed_at = timezone.now()
+				case.forwarded_to_sro = False
+				case.save()
+				CaseUpdate.objects.create(case=case, action='sro_update', remark=f"SRO uploaded receipt for BT/Transaction case. Status changed to DONE. LRN generated: {case.legal_reference_number}. Amount={case.receipt_amount} | ReceiptNo={case.receipt_number or '-'}")
+				messages.success(request, f'Receipt uploaded successfully. LRN generated: {case.legal_reference_number}. Status changed to DONE.')
+			else:
+				# Regular flow: request document upload by advocate
+				case.status = 'sro_document_pending'
+				case.forwarded_to_sro = False
+				case.completed_at = None
+				case.save()
+				CaseUpdate.objects.create(case=case, action='sro_update', remark=f"SRO uploaded receipt; sent back to advocate. Amount={case.receipt_amount} | ReceiptNo={case.receipt_number or '-'}")
+				messages.success(request, 'Receipt uploaded. Case returned to Advocate for document upload.')
 			return redirect('dashboard')
 	else:
 		form = SROUpdateForm(initial={'receipt_number': case.receipt_number, 'receipt_expense': case.receipt_expense, 'receipt_amount': case.receipt_amount})

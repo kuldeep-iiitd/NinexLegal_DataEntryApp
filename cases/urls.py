@@ -28,6 +28,7 @@ urlpatterns = [
     path('post-finalize/<int:case_id>/', views.post_finalize_options, name='post_finalize_options'),
     path('add-child-case/<int:case_id>/', views.add_child_case, name='add_child_case'),
     path('delete-case/<int:case_id>/', views.delete_case, name='delete_case'),
+    path('edit-case-information/<int:case_id>/', views.edit_case_information, name='edit_case_information'),
     path('finalize-quotation/<int:case_id>/', views.finalize_quotation, name='finalize_quotation'),
     
     # Case Types

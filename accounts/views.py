@@ -54,6 +54,10 @@ def dashboard(request):
             pending_today_list = pending_cases_qs.filter(updated_at__date=today)
             pending_overall_list = pending_cases_qs.exclude(id__in=pending_today_list.values('id'))
 
+            # Cases in current month
+            current_month_start = today.replace(day=1)
+            cases_this_month = assigned_cases.filter(created_at__date__gte=current_month_start).count()
+
             # Completed cases categorized - only parent cases
             positive_cases = assigned_cases.filter(status='positive').order_by('-completed_at')
             positive_child_cases = assigned_child_cases.filter(status='positive').order_by('-completed_at')
@@ -63,6 +67,11 @@ def dashboard(request):
             draft_positive_subject_child_cases = assigned_child_cases.filter(status='draft_positive_subject_tosearch').order_by('-completed_at')
             negative_cases = assigned_cases.filter(status='negative').order_by('-completed_at')
             negative_child_cases = assigned_child_cases.filter(status='negative').order_by('-completed_at')
+            
+            # Query cases - parent and child
+            query_cases = assigned_cases.filter(status='query').order_by('-updated_at')
+            query_child_cases = assigned_child_cases.filter(status='query').order_by('-updated_at')
+            query_total = query_cases.count() + query_child_cases.count()
             
             # SRO document pending cases - only parent cases
             sro_document_pending_cases = assigned_cases.filter(status='sro_document_pending').order_by('-updated_at')
@@ -101,6 +110,7 @@ def dashboard(request):
                 "pending_cases": pending_cases,
                 "completed_cases": completed_cases,
                 "doc_pending_count": doc_pending_count,
+                "cases_this_month": cases_this_month,
                 # Counters
                 "pending_cases_list": pending_cases_qs,  # kept for header count
                 "hold_query_doc_cases_list": hold_query_doc_cases_list,
@@ -122,6 +132,9 @@ def dashboard(request):
                 "negative_cases": negative_cases,
                 "negative_child_cases": negative_child_cases,
                 "negative_total": negative_total,
+                "query_cases": query_cases,
+                "query_child_cases": query_child_cases,
+                "query_total": query_total,
                 "sro_document_pending_cases": sro_document_pending_cases,
                 "sro_document_pending_child_cases": sro_document_pending_child_cases,
                 "sro_document_pending_total": sro_document_pending_total,
@@ -134,8 +147,11 @@ def dashboard(request):
             search_query = request.GET.get('search', '').strip()
             eligible_statuses = ['positive_subject_tosearch', 'negative', 'positive']
             # Independent listing (parents and children). Include PSTS automatically or explicitly forwarded cases.
-            sro_cases = Case.objects.filter(
-                Q(forwarded_to_sro=True) | Q(status='positive_subject_tosearch'),
+            # BT/Transaction cases will have forwarded_to_sro=True, status='positive', and assigned_sro set
+            sro_cases = Case.objects.select_related('bank', 'case_type', 'assigned_advocate', 'assigned_sro').filter(
+                Q(forwarded_to_sro=True, assigned_sro=employee) | 
+                Q(status='positive_subject_tosearch') |
+                Q(forwarded_to_sro=True, assigned_sro__isnull=True),  # Legacy cases without specific SRO assignment
                 status__in=eligible_statuses
             ).order_by('-created_at')  # Newest cases first
             # Apply search filter if provided
@@ -147,7 +163,7 @@ def dashboard(request):
                 ).distinct()
             sro_pss_cases = sro_cases.filter(status='positive_subject_tosearch')
             sro_negative_cases = sro_cases.filter(status='negative')
-            sro_positive_cases = sro_cases.filter(status='positive')
+            sro_positive_cases = sro_cases.filter(status='positive')  # Includes BT/Transaction cases awaiting receipt
             
             context = {
                 "username": user.username,
@@ -207,6 +223,10 @@ def dashboard(request):
         yesterday = today - timedelta(days=1)
         last_7_days = today - timedelta(days=7)
         last_30_days = today - timedelta(days=30)
+        
+        # Cases in current month
+        current_month_start = today.replace(day=1)
+        cases_this_month = Case.objects.filter(created_at__date__gte=current_month_start).count()
         
         advocates = Employee.objects.filter(employee_type='advocate', is_active=True)
         advocate_stats = []
@@ -276,6 +296,7 @@ def dashboard(request):
             "cases_yesterday": cases_yesterday,
             "cases_7days": cases_7days,
             "cases_30days": cases_30days,
+            "cases_this_month": cases_this_month,
             "completed_today": completed_today,
             "completed_yesterday": completed_yesterday,
             "completed_7days": completed_7days,

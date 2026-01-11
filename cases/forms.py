@@ -31,6 +31,12 @@ class CaseCreationForm(forms.ModelForm):
         empty_label="Select an Advocate",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    assigned_sro = forms.ModelChoiceField(
+        queryset=Employee.objects.filter(employee_type='sro', is_active=True),
+        required=False,
+        empty_label="Select an SRO",
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_assigned_sro'})
+    )
     assign_to_admin = forms.BooleanField(
         required=False,
         label="Assign to Admin (AD)",
@@ -39,7 +45,7 @@ class CaseCreationForm(forms.ModelForm):
     
     class Meta:
         model = Case
-        fields = ['applicant_name', 'case_number', 'bank', 'case_type', 'is_quotation', 'quotation_price', 'documents_present', 'assigned_advocate']
+        fields = ['applicant_name', 'case_number', 'bank', 'case_type', 'is_quotation', 'quotation_price', 'documents_present', 'assigned_advocate', 'assigned_sro']
         widgets = {
             'applicant_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter applicant name'}),
             'case_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter case number'}),
@@ -872,3 +878,33 @@ class SROScopeForm(forms.ModelForm):
         self.fields['allowed_states'].queryset = State.objects.order_by('name')
         self.fields['allowed_districts'].queryset = District.objects.select_related('state').order_by('state__name', 'name')
         self.fields['allowed_tehsils'].queryset = Tehsil.objects.select_related('district', 'district__state').order_by('district__state__name', 'district__name', 'name')
+
+
+class EditCaseInformationForm(forms.ModelForm):
+    """Admin-only form to edit basic case information"""
+    
+    class Meta:
+        model = Case
+        fields = ['applicant_name', 'case_number', 'bank', 'case_type']
+        widgets = {
+            'applicant_name': forms.TextInput(attrs={
+                'class': 'w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none',
+                'placeholder': 'Enter applicant name'
+            }),
+            'case_number': forms.TextInput(attrs={
+                'class': 'w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none',
+                'placeholder': 'Enter case number'
+            }),
+            'bank': forms.Select(attrs={
+                'class': 'w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none'
+            }),
+            'case_type': forms.Select(attrs={
+                'class': 'w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none'
+            }),
+        }
+        labels = {
+            'applicant_name': 'Applicant Name',
+            'case_number': 'Case Number / File Number',
+            'bank': 'Bank/NBFC',
+            'case_type': 'Case Type',
+        }
