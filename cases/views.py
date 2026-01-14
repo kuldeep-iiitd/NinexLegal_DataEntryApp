@@ -161,7 +161,8 @@ def create_case(request):
 				case.status = 'done'
 				case.documents_present = True
 				case.forwarded_to_sro = True
-				# Assign both advocate and SRO if provided
+				case.assigned_advocate = None  # No advocate needed for BT/Transaction
+				# Assign SRO if provided
 				assigned_sro = form.cleaned_data.get('assigned_sro')
 				if assigned_sro:
 					case.assigned_sro = assigned_sro
@@ -1512,15 +1513,16 @@ def admin_change_case_status(request, case_id):
 def delete_case(request, case_id):
 	case = get_object_or_404(Case, id=case_id)
 	
-	# If trying to delete a child case, redirect to parent
-	if case.parent_case:
-		messages.warning(request, f"Cannot delete child case directly. Child cases are managed through the parent case.")
-		return redirect('case_detail', case_id=case.parent_case.id)
+	# Store parent case ID if this is a child case
+	parent_case_id = case.parent_case.id if case.parent_case else None
 	
 	if request.method == 'POST':
 		number = case.case_number
 		case.delete()
-		messages.success(request, f'Case {number} deleted.')
+		messages.success(request, f'Case {number} deleted successfully.')
+		# If it was a child case, redirect to parent case detail
+		if parent_case_id:
+			return redirect('case_detail', case_id=parent_case_id)
 		return redirect('view_cases')
 	return render(request, 'cases/delete_case_confirm.html', {'case': case})
 

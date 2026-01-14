@@ -254,7 +254,7 @@
                             <div class="bg-cyan-500/30 border-l-4 border-cyan-300 p-4 rounded-r-lg mt-4">
                                 <div class="flex items-center">
                                     <i class="fas fa-info-circle text-cyan-100 mr-2"></i>
-                                    <p class="text-white text-sm">For BT/Transaction cases, both Advocate and SRO must be assigned. Case will be forwarded to SRO dashboard for receipt upload.</p>
+                                    <p class="text-white text-sm">For BT/Transaction cases, only SRO must be assigned. Case will be forwarded to SRO dashboard for receipt upload.</p>
                                 </div>
                             </div>
                         </div>
@@ -369,6 +369,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (isBTTransaction && docsChecked) {
             sroSelectionDiv.style.display = 'block';
+            // Hide advocate section for BT/Transaction cases
+            if (advocateSection) {
+                advocateSection.classList.add('hidden');
+                advocateSelect.required = false;
+                advocateSelect.value = '';
+            }
         } else {
             sroSelectionDiv.style.display = 'none';
         }
@@ -379,7 +385,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const assigningToAdmin = assignToAdminCheckbox && assignToAdminCheckbox.checked;
         const isQuotation = quotationCheckbox && quotationCheckbox.checked;
-        const showAdvocatePick = !isQuotation && !assigningToAdmin && documentsCheckbox.checked;
+        const selectedText = caseTypeSelect ? (caseTypeSelect.options[caseTypeSelect.selectedIndex]?.text || '') : '';
+        const isBTTransaction = selectedText.includes('BT') || selectedText.includes('Transaction');
+        const showAdvocatePick = !isQuotation && !assigningToAdmin && documentsCheckbox.checked && !isBTTransaction;
         
         if (showAdvocatePick) {
             advocateSection.classList.remove('hidden');
@@ -391,8 +399,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 advocateSelect.required = false;
                 advocateSelect.value = '';
             }
-            // Show no documents info unless quotation or assigning to admin
-            if (!isQuotation && !assigningToAdmin) {
+            // Show no documents info unless quotation or assigning to admin or BT/Transaction
+            if (!isQuotation && !assigningToAdmin && !isBTTransaction) {
                 noDocumentsInfo.classList.remove('hidden');
             } else {
                 noDocumentsInfo.classList.add('hidden');
