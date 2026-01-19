@@ -67,6 +67,7 @@ urlpatterns = [
     path('sro/', views.sro_dashboard, name='sro_dashboard'),
     path('sro/case/<int:case_id>/', views.sro_case_detail, name='sro_case_detail'),
     path('sro/update/<int:case_id>/', views.sro_update_case, name='sro_update_case'),
+    path('sro/assign-advocate-bt/<int:case_id>/', views.sro_assign_advocate_bt, name='sro_assign_advocate_bt'),
     path('sro/update-group/<int:case_id>/', views.sro_update_group, name='sro_update_group'),
     # SRO management (admin)
     path('sro/manage/', views.sro_manage, name='sro_manage'),

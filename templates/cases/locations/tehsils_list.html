@@ -45,6 +45,8 @@
             <th class="text-left p-4 font-semibold text-gray-700">State</th>
             <th class="text-left p-4 font-semibold text-gray-700">District</th>
             <th class="text-left p-4 font-semibold text-gray-700">Tehsil</th>
+            <th class="text-left p-4 font-semibold text-gray-700">Contact Name</th>
+            <th class="text-left p-4 font-semibold text-gray-700">Contact Number</th>
             <th class="text-left p-4 font-semibold text-gray-700">Actions</th>
           </tr>
         </thead>
@@ -54,6 +56,8 @@
             <td class="p-4 text-gray-600">{{ t.district.state.name }}</td>
             <td class="p-4 text-gray-600">{{ t.district.name }}</td>
             <td class="p-4 font-medium text-gray-800">{{ t.name }}</td>
+            <td class="p-4 text-gray-600">{{ t.contact_name|default:"--" }}</td>
+            <td class="p-4 text-gray-600">{{ t.contact_number|default:"--" }}</td>
             <td class="p-4 space-x-3">
               <a class="text-blue-600 hover:text-blue-700 hover:underline font-medium" href="{% url 'locations_tehsil_edit' t.id %}">
                 <i class="fas fa-edit"></i> Edit
@@ -65,7 +69,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td class="p-8 text-center text-gray-500" colspan="4">
+            <td class="p-8 text-center text-gray-500" colspan="6">
               <div class="flex flex-col items-center">
                 <i class="fas fa-map-pin text-4xl text-gray-300 mb-2"></i>
                 <p>No tehsils yet.</p>

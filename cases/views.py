@@ -158,10 +158,10 @@ def create_case(request):
 				case.assigned_advocate = None
 			elif is_bt_transaction:
 				# Special handling for BT/Transaction cases
-				case.status = 'done'
+				case.status = 'pending'  # Keep in SRO tray until advocate assigned
 				case.documents_present = True
 				case.forwarded_to_sro = True
-				case.assigned_advocate = None  # No advocate needed for BT/Transaction
+				case.assigned_advocate = None  # No advocate until SRO assigns
 				# Assign SRO if provided
 				assigned_sro = form.cleaned_data.get('assigned_sro')
 				if assigned_sro:
@@ -210,10 +210,9 @@ def create_case(request):
 			try:
 				if case.is_quotation or case.status == 'quotation':
 					remark_msg = f"Created as quotation. Quoted price={case.quotation_price}"
-				elif case.status == 'done':
-					advocate_name = case.assigned_advocate.name if case.assigned_advocate else 'N/A'
+				elif is_bt_transaction and case.forwarded_to_sro:
 					sro_name = case.assigned_sro.name if case.assigned_sro else 'N/A'
-					remark_msg = f"Created as {case_type_name} case. Advocate: {advocate_name}, SRO: {sro_name}"
+					remark_msg = f"Created as {case_type_name} case. Forwarded to SRO: {sro_name}. Awaiting receipt upload and advocate assignment."
 				elif case.assigned_advocate:
 					remark_msg = f"Created and assigned to {case.assigned_advocate.name}"
 				else:
@@ -223,8 +222,8 @@ def create_case(request):
 				pass
 			if case.status == 'quotation':
 				messages.success(request, f"Quotation case {case.case_number} created with quoted price {case.quotation_price}.")
-			elif case.status == 'done':
-				messages.success(request, f"{case_type_name} case {case.case_number} created and forwarded to SRO for receipt upload.")
+			elif is_bt_transaction and case.forwarded_to_sro:
+				messages.success(request, f"{case_type_name} case {case.case_number} created and forwarded to SRO for receipt upload and advocate assignment.")
 			elif case.assigned_advocate:
 				messages.success(request, f"Case {case.case_number} created and assigned to {case.assigned_advocate.name}.")
 			else:
@@ -322,10 +321,11 @@ def view_cases(request):
 	if not is_admin:
 		try:
 			# Pending count should reflect active pending statuses only
-			active_statuses = ['pending','query','document_pending','sro_document_pending']
+			active_statuses = ['pending','query','document_pending','sro_document_pending','pdd_document_pending']
 			status_counts['pending'] = cases.filter(status__in=['pending']).count()
 			status_counts['query'] = cases.filter(status='query').count()
 			status_counts['sro_document_pending'] = cases.filter(status='sro_document_pending').count()
+			status_counts['pdd_document_pending'] = cases.filter(status='pdd_document_pending').count()
 			status_counts['draft'] = cases.filter(status='draft').count()
 			status_counts['positive'] = cases.filter(status='positive').count()
 			status_counts['positive_subject_tosearch'] = cases.filter(status='positive_subject_tosearch').count()
@@ -349,6 +349,7 @@ def view_cases(request):
 		status_counts['pending'] = all_cases_qs.filter(status='pending').count()
 		status_counts['query'] = all_cases_qs.filter(status='query').count()
 		status_counts['sro_document_pending'] = all_cases_qs.filter(status='sro_document_pending').count()
+		status_counts['pdd_document_pending'] = all_cases_qs.filter(status='pdd_document_pending').count()
 		status_counts['draft'] = all_cases_qs.filter(status='draft').count()
 		status_counts['positive'] = all_cases_qs.filter(status='positive').count()
 		status_counts['positive_subject_tosearch'] = all_cases_qs.filter(status='positive_subject_tosearch').count()
@@ -372,6 +373,8 @@ def view_cases(request):
 		# Include SRO document pending cases
 		# Admin: show all; Advocate: show only those assigned to them (parents or children)
 		'sro_document_pending_list': Case.objects.select_related('bank','case_type','assigned_advocate').filter(status='sro_document_pending').order_by('-updated_at'),
+		# Include PDD document pending cases (BT/Transaction)
+		'pdd_document_pending_list': Case.objects.select_related('bank','case_type','assigned_advocate').filter(status='pdd_document_pending').order_by('-updated_at'),
 		'status_counts': status_counts,
 		'is_admin': is_admin,
 		'search_query': search_query,
@@ -382,6 +385,8 @@ def view_cases(request):
 		# Narrow SRO Document Pending to advocate's cases
 		# Use the advocate-scoped queryset to avoid any mismatch and ensure distinct results
 		context['sro_document_pending_list'] = qs.filter(status='sro_document_pending').order_by('-updated_at')
+		# Narrow PDD Document Pending to advocate's cases
+		context['pdd_document_pending_list'] = qs.filter(status='pdd_document_pending').order_by('-updated_at')
 		context.update({
 			'pending_today': pending_today,
 			'pending_overall': pending_overall,
@@ -1080,11 +1085,14 @@ def case_upload_document(request, case_id):
 	"""Mandatory step after finalization to upload supporting document. Shows the LRN and enforces single-document policy."""
 	case = get_object_or_404(Case, id=case_id)
 	
+	# Check if this is a BT/Transaction case
+	is_bt_transaction = case.case_type and ('BT' in case.case_type.name or 'Transaction' in case.case_type.name)
+	
 	if not check_case_access(request.user, case):
 		messages.error(request, "You don't have permission to upload for this case.")
 		return redirect('view_cases')
 	# Allow upload after SRO receipt when returned to advocate
-	if case.status not in ['positive', 'positive_subject_tosearch', 'draft_positive_subject_tosearch', 'negative', 'document_pending', 'sro_document_pending']:
+	if case.status not in ['positive', 'positive_subject_tosearch', 'draft_positive_subject_tosearch', 'negative', 'document_pending', 'sro_document_pending', 'pdd_document_pending']:
 		messages.info(request, 'Document upload is only required after SRO receipt or after finalizing the case.')
 		return redirect('case_detail', case_id=case.id)
 	# Ensure LRN exists
@@ -1095,7 +1103,11 @@ def case_upload_document(request, case_id):
 		form = CaseDocumentUploadForm(request.POST, request.FILES)
 		if form.is_valid():
 			file = form.files['supporting_document']
-			desc = form.cleaned_data.get('document_description') or f"Final document for {case.get_status_display()}"
+			# For BT/Transaction cases, description should indicate PDD
+			if is_bt_transaction:
+				desc = "PDD Document (BT/Transaction)"
+			else:
+				desc = form.cleaned_data.get('document_description') or f"Final document for {case.get_status_display()}"
 			# Replace only prior final docs; preserve receipts and additional docs
 			prior_finals = list(case.documents.filter(is_final=True))
 			if prior_finals:
@@ -1117,14 +1129,23 @@ def case_upload_document(request, case_id):
 				is_receipt=False,
 				is_final=True
 			)
+			# BT/Transaction: mark done immediately after PDD upload
+			if is_bt_transaction:
+				from django.utils import timezone
+				case.status = 'done'
+				case.completed_at = timezone.now()
+				case.save(update_fields=['status', 'completed_at', 'updated_at'])
+				CaseUpdate.objects.create(case=case, action='pdd_uploaded', remark='PDD document uploaded and case marked done.')
+				messages.success(request, 'PDD document uploaded. Case marked as done.')
+				return redirect('view_cases')
 			messages.success(request, 'Supporting document uploaded successfully.')
 			# If the case is not finalized yet (document pending), send advocate to action page to finalize now
-			if case.status in ['document_pending','sro_document_pending']:
+			if case.status in ['document_pending','sro_document_pending','pdd_document_pending']:
 				return redirect('case_action', case_id=case.id)
 			return redirect('post_finalize_options', case_id=case.id)
 	else:
 		form = CaseDocumentUploadForm()
-	return render(request, 'cases/case_upload_document.html', {'case': case, 'form': form})
+	return render(request, 'cases/case_upload_document.html', {'case': case, 'form': form, 'is_bt_transaction': is_bt_transaction})
 
 
 @advocate_or_admin_required
@@ -2025,11 +2046,11 @@ def sro_update_case(request, case_id):
 		if not allowed:
 			messages.error(request, 'You do not have rights to update this case.')
 			return redirect('dashboard')
-	# Eligibility: allow PSTS regardless of forwarded flag; for Positive/Negative require explicit forwarding
-	if case.status not in ['positive_subject_tosearch', 'negative', 'positive']:
+	# Eligibility: allow PSTS regardless of forwarded flag; for Positive/Negative/Pending require explicit forwarding
+	if case.status not in ['positive_subject_tosearch', 'negative', 'positive', 'pending']:
 		messages.error(request, 'This case is not eligible for SRO update.')
 		return redirect('dashboard')
-	if case.status in ['positive','negative'] and not case.forwarded_to_sro:
+	if case.status in ['positive','negative','pending'] and not case.forwarded_to_sro:
 		messages.error(request, 'This Positive/Negative case was not forwarded to SRO.')
 		return redirect('dashboard')
 
@@ -2065,14 +2086,10 @@ def sro_update_case(request, case_id):
 			
 			# Special handling for BT/Transaction cases
 			if case.case_type and ('BT' in case.case_type.name or 'Transaction' in case.case_type.name):
-				# Generate LRN, set status to 'done', and mark as completed
-				case.generate_legal_reference_number()
-				case.status = 'done'
-				case.completed_at = timezone.now()
-				case.forwarded_to_sro = False
+				# Just upload receipt, don't generate LRN or assign advocate yet
 				case.save()
-				CaseUpdate.objects.create(case=case, action='sro_update', remark=f"SRO uploaded receipt for BT/Transaction case. Status changed to DONE. LRN generated: {case.legal_reference_number}. Amount={case.receipt_amount} | ReceiptNo={case.receipt_number or '-'}")
-				messages.success(request, f'Receipt uploaded successfully. LRN generated: {case.legal_reference_number}. Status changed to DONE.')
+				CaseUpdate.objects.create(case=case, action='sro_update', remark=f"SRO uploaded receipt for BT/Transaction case. Amount={case.receipt_amount} | ReceiptNo={case.receipt_number or '-'}. Awaiting advocate assignment.")
+				messages.success(request, 'Receipt uploaded successfully. You can now assign an advocate to this case.')
 			else:
 				# Regular flow: request document upload by advocate
 				case.status = 'sro_document_pending'
@@ -2086,6 +2103,71 @@ def sro_update_case(request, case_id):
 		form = SROUpdateForm(initial={'receipt_number': case.receipt_number, 'receipt_expense': case.receipt_expense, 'receipt_amount': case.receipt_amount})
 
 	return render(request, 'cases/sro_update_case.html', {'form': form, 'case': case})
+
+
+@sro_or_admin_required
+def sro_assign_advocate_bt(request, case_id):
+	"""Allow SRO to assign advocate to BT/Transaction case. This generates LRN and removes from SRO tray."""
+	case = get_object_or_404(Case, id=case_id)
+	
+	# Verify this is a BT/Transaction case
+	is_bt_transaction = case.case_type and ('BT' in case.case_type.name or 'Transaction' in case.case_type.name)
+	if not is_bt_transaction:
+		messages.error(request, 'This view is only for BT/Transaction cases.')
+		return redirect('dashboard')
+	
+	# Verify case has receipt uploaded
+	if not case.receipt_number:
+		messages.error(request, 'Please upload receipt before assigning advocate.')
+		return redirect('sro_update_case', case_id=case.id)
+	
+	# Verify case is still in SRO tray
+	if case.status != 'pending' or not case.forwarded_to_sro:
+		messages.error(request, 'This case is not in SRO pending queue.')
+		return redirect('dashboard')
+	
+	if request.method == 'POST':
+		advocate_id = request.POST.get('advocate_id')
+		if not advocate_id:
+			messages.error(request, 'Please select an advocate.')
+		else:
+			try:
+				advocate = Employee.objects.get(id=advocate_id, employee_type=Employee.ADVOCATE, is_active=True)
+				
+				# Assign advocate
+				case.assigned_advocate = advocate
+				
+				# Generate LRN
+				case.generate_legal_reference_number()
+				
+				# Change status to 'pdd_document_pending' so advocate can upload PDD
+				case.status = 'pdd_document_pending'
+				
+				# Remove from SRO tray
+				case.forwarded_to_sro = False
+				
+				# Save case
+				case.save()
+				
+				# Create update log
+				CaseUpdate.objects.create(
+					case=case,
+					action='advocate_assigned',
+					remark=f"SRO assigned advocate {advocate.name} to BT/Transaction case. LRN generated: {case.legal_reference_number}. Awaiting PDD document from advocate."
+				)
+				
+				messages.success(request, f'Advocate {advocate.name} assigned successfully. LRN {case.legal_reference_number} generated. Case moved to advocate dashboard.')
+				return redirect('dashboard')
+			except Employee.DoesNotExist:
+				messages.error(request, 'Invalid advocate selected.')
+	
+	# Get all active advocates
+	advocates = Employee.objects.filter(employee_type=Employee.ADVOCATE, is_active=True).order_by('name')
+	
+	return render(request, 'cases/sro_assign_advocate_bt.html', {
+		'case': case,
+		'advocates': advocates,
+	})
 
 
 @sro_or_admin_required

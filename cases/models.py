@@ -25,6 +25,8 @@ class District(models.Model):
 class Tehsil(models.Model):
 	district = models.ForeignKey(District, on_delete=models.CASCADE, related_name='tehsils')
 	name = models.CharField(max_length=150)
+	contact_name = models.CharField(max_length=100, blank=True, null=True)
+	contact_number = models.CharField(max_length=20, blank=True, null=True)
 
 	class Meta:
 		unique_together = ('district', 'name')
@@ -108,6 +110,7 @@ class Case(models.Model):
 		('query', 'Query'),
 		('document_pending', 'Document Pending'),
 		('sro_document_pending', 'SRO Document Pending'),
+		('pdd_document_pending', 'PDD Document Pending'),
 		('positive_subject_tosearch', 'Positive Subject to Search'),
 		('draft_positive_subject_tosearch', 'Draft Positive Subject to Search'),
 		('pending_assignment', 'Pending Assignment'),

@@ -20,8 +20,8 @@ class DistrictAdmin(admin.ModelAdmin):
 
 @admin.register(Tehsil)
 class TehsilAdmin(admin.ModelAdmin):
-	search_fields = ['name', 'district__name', 'district__state__name']
-	list_display = ['name', 'district']
+	search_fields = ['name', 'district__name', 'district__state__name', 'contact_name', 'contact_number']
+	list_display = ['name', 'district', 'contact_name', 'contact_number']
 	list_filter = ['district__state']
 
 # External Bank models are registered in Bank app's admin; avoid duplicate registration here.

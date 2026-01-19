@@ -78,6 +78,11 @@ def dashboard(request):
             sro_document_pending_child_cases = assigned_child_cases.filter(status='sro_document_pending').order_by('-updated_at')
             sro_document_pending_total = sro_document_pending_cases.count() + sro_document_pending_child_cases.count()
             
+            # PDD document pending cases - BT/Transaction cases awaiting PDD upload
+            pdd_document_pending_cases = assigned_cases.filter(status='pdd_document_pending').order_by('-updated_at')
+            pdd_document_pending_child_cases = assigned_child_cases.filter(status='pdd_document_pending').order_by('-updated_at')
+            pdd_document_pending_total = pdd_document_pending_cases.count() + pdd_document_pending_child_cases.count()
+            
             # Compute totals for completed categories (parent + child)
             positive_total = positive_cases.count() + positive_child_cases.count()
             positive_subject_total = positive_subject_cases.count() + positive_subject_child_cases.count()
@@ -138,6 +143,9 @@ def dashboard(request):
                 "sro_document_pending_cases": sro_document_pending_cases,
                 "sro_document_pending_child_cases": sro_document_pending_child_cases,
                 "sro_document_pending_total": sro_document_pending_total,
+                "pdd_document_pending_cases": pdd_document_pending_cases,
+                "pdd_document_pending_child_cases": pdd_document_pending_child_cases,
+                "pdd_document_pending_total": pdd_document_pending_total,
             }
             return render(request, "accounts/employee_dashboard.html", context)
 
@@ -145,9 +153,9 @@ def dashboard(request):
         if employee_type == 'sro' and not is_admin:
             # Get search query from request
             search_query = request.GET.get('search', '').strip()
-            eligible_statuses = ['positive_subject_tosearch', 'negative', 'positive']
+            eligible_statuses = ['positive_subject_tosearch', 'negative', 'positive', 'pending']
             # Independent listing (parents and children). Include PSTS automatically or explicitly forwarded cases.
-            # BT/Transaction cases will have forwarded_to_sro=True, status='positive', and assigned_sro set
+            # BT/Transaction cases will have forwarded_to_sro=True, status='pending', and assigned_sro set
             sro_cases = Case.objects.select_related('bank', 'case_type', 'assigned_advocate', 'assigned_sro').filter(
                 Q(forwarded_to_sro=True, assigned_sro=employee) | 
                 Q(status='positive_subject_tosearch') |
@@ -163,7 +171,8 @@ def dashboard(request):
                 ).distinct()
             sro_pss_cases = sro_cases.filter(status='positive_subject_tosearch')
             sro_negative_cases = sro_cases.filter(status='negative')
-            sro_positive_cases = sro_cases.filter(status='positive')  # Includes BT/Transaction cases awaiting receipt
+            sro_positive_cases = sro_cases.filter(status='positive')
+            sro_pending_cases = sro_cases.filter(status='pending')  # BT/Transaction cases pending advocate assignment
             
             context = {
                 "username": user.username,
@@ -178,9 +187,11 @@ def dashboard(request):
                 "sro_pss_count": sro_pss_cases.count(),
                 "sro_negative_count": sro_negative_cases.count(),
                 "sro_positive_count": sro_positive_cases.count(),
+                "sro_pending_count": sro_pending_cases.count(),
                 "sro_pss_cases": sro_pss_cases,
                 "sro_negative_cases": sro_negative_cases,
                 "sro_positive_cases": sro_positive_cases,
+                "sro_pending_cases": sro_pending_cases,
                 "search_query": search_query,
             }
             return render(request, "accounts/sro_dashboard.html", context)
@@ -202,6 +213,7 @@ def dashboard(request):
             ('on_hold','On Hold'),
             ('query','Query'),
             ('document_pending','Doc Pending'),
+            ('pdd_document_pending','PDD Pending'),
         ]
         completed_cards_def = [
             ('positive_subject_tosearch','PSS'),
@@ -628,7 +640,7 @@ def super_sro_dashboard(request):
     
     # Get all SRO-eligible cases (forwarded to SRO or PSTS status)
     # Order by created_at descending to show newest cases first
-    eligible_statuses = ['positive', 'positive_subject_tosearch', 'negative']
+    eligible_statuses = ['positive', 'positive_subject_tosearch', 'negative', 'pending']
     sro_cases = Case.objects.filter(
         Q(forwarded_to_sro=True) | Q(status='positive_subject_tosearch'),
         status__in=eligible_statuses
@@ -646,6 +658,7 @@ def super_sro_dashboard(request):
     sro_pss_cases = sro_cases.filter(status='positive_subject_tosearch')
     sro_negative_cases = sro_cases.filter(status='negative')
     sro_positive_cases = sro_cases.filter(status='positive')
+    sro_pending_cases = sro_cases.filter(status='pending')  # BT/Transaction cases
     
     context = {
         "username": user.username,
@@ -656,9 +669,11 @@ def super_sro_dashboard(request):
         "sro_pss_count": sro_pss_cases.count(),
         "sro_negative_count": sro_negative_cases.count(),
         "sro_positive_count": sro_positive_cases.count(),
+        "sro_pending_count": sro_pending_cases.count(),
         "sro_pss_cases": sro_pss_cases,
         "sro_negative_cases": sro_negative_cases,
         "sro_positive_cases": sro_positive_cases,
+        "sro_pending_cases": sro_pending_cases,
         "search_query": search_query,
     }
     return render(request, "accounts/sro_dashboard.html", context)

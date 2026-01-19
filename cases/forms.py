@@ -773,10 +773,12 @@ class TehsilForm(forms.ModelForm):
     )
     class Meta:
         model = Tehsil
-        fields = ['district', 'name']
+        fields = ['district', 'name', 'contact_name', 'contact_number']
         widgets = {
             'district': forms.Select(attrs={'class': 'w-full border rounded p-2'}),
             'name': forms.TextInput(attrs={'class': 'w-full border rounded p-2', 'placeholder': 'Tehsil/Taluk/Mandal name'}),
+            'contact_name': forms.TextInput(attrs={'class': 'w-full border rounded p-2', 'placeholder': 'Contact person name (optional)'}),
+            'contact_number': forms.TextInput(attrs={'class': 'w-full border rounded p-2', 'placeholder': 'Contact number (optional)'}),
         }
 
     def __init__(self, *args, **kwargs):
