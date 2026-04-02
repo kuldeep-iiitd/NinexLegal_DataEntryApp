@@ -88,7 +88,7 @@
                                         <p class="font-bold text-white text-lg">{{ case.case_number }}</p>
                                     </div>
                                 </div>
-                                {% if is_active_quotation or case.status == 'quotation' %}
+                                {% if is_admin and (is_active_quotation or case.status == 'quotation') %}
                                 <div class="flex items-center p-4 bg-gray-800/60 backdrop-blur-sm rounded-lg border border-white/20">
                                     <div class="bg-teal-500 rounded-lg p-2.5 mr-3">
                                         <i class="fas fa-dollar-sign text-white"></i>
@@ -674,10 +674,10 @@
                                                 </div>
                                                 {% endif %}
                                                 
-                                                {% if update.remark %}
+                                                {% if update.display_remark %}
                                                 <div class="mt-3 bg-gray-900/50 p-3 rounded border border-white/10">
                                                     <p class="text-xs text-gray-400 uppercase mb-1">Remark</p>
-                                                    <p class="text-sm text-gray-200">{{ update.remark }}</p>
+                                                    <p class="text-sm text-gray-200">{{ update.display_remark }}</p>
                                                 </div>
                                                 {% endif %}
                                                 

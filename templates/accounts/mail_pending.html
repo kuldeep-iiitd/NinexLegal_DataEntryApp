@@ -1,0 +1,159 @@
+{% extends 'accounts/admin_base.html' %}
+{% block title %}Mail Pending | NinexLegal{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="stat-card">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm text-gray-500">Advocate Mail Pending</div>
+          <div class="text-3xl font-bold text-gray-800">{{ advocate_pending_count|default:0 }}</div>
+        </div>
+        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white">
+          <i class="fas fa-envelope"></i>
+        </div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm text-gray-500">SRO Mail Pending</div>
+          <div class="text-3xl font-bold text-gray-800">{{ sro_pending_count|default:0 }}</div>
+        </div>
+        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white">
+          <i class="fas fa-envelope-open-text"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-card mb-8">
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center">
+        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white mr-4">
+          <i class="fas fa-user-check text-xl"></i>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold text-gray-800">Advocate Completed</h2>
+          <div class="text-sm text-gray-500">Finalized cases waiting for admin mail confirmation</div>
+        </div>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full">
+        <thead>
+          <tr class="border-b-2 border-gray-200 bg-gray-50">
+            <th class="text-left p-4 font-bold text-gray-700">Case</th>
+            <th class="text-left p-4 font-bold text-gray-700">Applicant</th>
+            <th class="text-left p-4 font-bold text-gray-700">Bank</th>
+            <th class="text-center p-4 font-bold text-gray-700">Status</th>
+            <th class="text-left p-4 font-bold text-gray-700">Advocate</th>
+            <th class="text-center p-4 font-bold text-gray-700">Completed</th>
+            <th class="text-center p-4 font-bold text-gray-700">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in advocate_pending %}
+          <tr class="border-b border-gray-100 hover:bg-emerald-50 transition-colors">
+            <td class="p-4">
+              <div class="font-semibold text-gray-800">{{ c.case_number }}</div>
+              <div class="text-xs text-gray-500">{{ c.legal_reference_number|default:"-" }}</div>
+            </td>
+            <td class="p-4 text-gray-700">{{ c.applicant_name }}</td>
+            <td class="p-4 text-gray-700">{{ c.bank.name|default:"-" }}</td>
+            <td class="p-4 text-center">
+              <span class="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-sm">{{ c.get_status_display }}</span>
+            </td>
+            <td class="p-4 text-gray-700">{{ c.assigned_advocate.name|default:"-" }}</td>
+            <td class="p-4 text-center text-gray-600">
+              {% if c.completed_at %}{{ c.completed_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}
+            </td>
+            <td class="p-4 text-center">
+              <form method="post" action="{% url 'mail_pending_dashboard' %}">
+                {% csrf_token %}
+                <input type="hidden" name="case_id" value="{{ c.id }}" />
+                <input type="hidden" name="mail_type" value="advocate" />
+                <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all">
+                  <i class="fas fa-check mr-2"></i>Mark Sent
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td class="p-8 text-center text-gray-500" colspan="7">
+              <i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>
+              <div>No advocate mail pending.</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center">
+        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white mr-4">
+          <i class="fas fa-file-signature text-xl"></i>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold text-gray-800">SRO Completed</h2>
+          <div class="text-sm text-gray-500">Receipt uploaded cases waiting for admin mail confirmation</div>
+        </div>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full">
+        <thead>
+          <tr class="border-b-2 border-gray-200 bg-gray-50">
+            <th class="text-left p-4 font-bold text-gray-700">Case</th>
+            <th class="text-left p-4 font-bold text-gray-700">Applicant</th>
+            <th class="text-left p-4 font-bold text-gray-700">Bank</th>
+            <th class="text-center p-4 font-bold text-gray-700">Status</th>
+            <th class="text-left p-4 font-bold text-gray-700">SRO</th>
+            <th class="text-center p-4 font-bold text-gray-700">Receipt No</th>
+            <th class="text-center p-4 font-bold text-gray-700">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in sro_pending %}
+          <tr class="border-b border-gray-100 hover:bg-orange-50 transition-colors">
+            <td class="p-4">
+              <div class="font-semibold text-gray-800">{{ c.case_number }}</div>
+              <div class="text-xs text-gray-500">{{ c.legal_reference_number|default:"-" }}</div>
+            </td>
+            <td class="p-4 text-gray-700">{{ c.applicant_name }}</td>
+            <td class="p-4 text-gray-700">{{ c.bank.name|default:"-" }}</td>
+            <td class="p-4 text-center">
+              <span class="px-3 py-1 rounded-lg bg-orange-100 text-orange-700 font-bold text-sm">{{ c.get_status_display }}</span>
+            </td>
+            <td class="p-4 text-gray-700">{{ c.assigned_sro.name|default:"-" }}</td>
+            <td class="p-4 text-center text-gray-600">{{ c.receipt_number|default:"-" }}</td>
+            <td class="p-4 text-center">
+              <form method="post" action="{% url 'mail_pending_dashboard' %}">
+                {% csrf_token %}
+                <input type="hidden" name="case_id" value="{{ c.id }}" />
+                <input type="hidden" name="mail_type" value="sro" />
+                <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold transition-all">
+                  <i class="fas fa-check mr-2"></i>Mark Sent
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td class="p-8 text-center text-gray-500" colspan="7">
+              <i class="fas fa-inbox text-4xl mb-2 text-gray-300"></i>
+              <div>No SRO mail pending.</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

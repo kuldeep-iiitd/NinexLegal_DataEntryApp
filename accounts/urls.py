@@ -10,6 +10,7 @@ urlpatterns = [
     path("dashboard/", views.dashboard, name="dashboard"),
     path("super-sro-dashboard/", views.super_sro_dashboard, name="super_sro_dashboard"),
     path("statistics/", views.admin_statistics, name="admin_statistics"),
+    path("mail-pending/", views.mail_pending_dashboard, name="mail_pending_dashboard"),
     path("cases-by-status/<str:status>/", views.cases_by_status, name="cases_by_status"),
     path("cases-by-advocate/<int:advocate_id>/", views.cases_by_advocate, name="cases_by_advocate"),
     path("cases-by-bank/<int:bank_id>/", views.cases_by_bank, name="cases_by_bank"),

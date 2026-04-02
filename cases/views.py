@@ -623,6 +623,19 @@ def case_detail(request, case_id):
 	
 	# Fetch all updates for this case, ordered by update_date
 	updates = CaseUpdate.objects.filter(case=case).order_by('update_date')
+	# Hide price-related remarks for non-admin users
+	if not is_admin:
+		keywords = ['price', 'fee', 'amount', 'receipt', 'quotation', 'quoted', 'total', 'expense', 'billing', 'charge', 'cost', 'rs', 'inr', '₹']
+		for u in updates:
+			remark = u.remark or ''
+			low = remark.lower()
+			if any(k in low for k in keywords):
+				setattr(u, 'display_remark', None)
+			else:
+				setattr(u, 'display_remark', remark)
+	else:
+		for u in updates:
+			setattr(u, 'display_remark', u.remark)
 	# Split documents into receipt, final, and additional
 	docs = list(case.documents.all())
 	receipt_docs = []
@@ -1034,6 +1047,11 @@ def case_action(request, case_id):
 				case.generate_legal_reference_number()
 				if forward:
 					case.forwarded_to_sro = True
+
+			# Mark advocate mail as pending for final actions
+			if action in ['positive', 'positive_subject_tosearch', 'draft_positive_subject_tosearch', 'negative']:
+				case.advocate_mail_sent = False
+				case.advocate_mail_sent_at = None
 			elif action == 'draft':
 				# Set status now so finalize page shows correct state; generate LRN if missing
 				case.status = 'draft'
@@ -1134,7 +1152,9 @@ def case_upload_document(request, case_id):
 				from django.utils import timezone
 				case.status = 'done'
 				case.completed_at = timezone.now()
-				case.save(update_fields=['status', 'completed_at', 'updated_at'])
+				case.advocate_mail_sent = False
+				case.advocate_mail_sent_at = None
+				case.save(update_fields=['status', 'completed_at', 'updated_at', 'advocate_mail_sent', 'advocate_mail_sent_at'])
 				CaseUpdate.objects.create(case=case, action='pdd_uploaded', remark='PDD document uploaded and case marked done.')
 				messages.success(request, 'PDD document uploaded. Case marked as done.')
 				return redirect('view_cases')
@@ -1318,6 +1338,9 @@ def case_finalize_with_document(request, case_id):
 			# Auto-forward if PSTS
 			if new_status == 'positive_subject_tosearch':
 				case.forwarded_to_sro = True
+			# Mark advocate mail as pending for finalization
+			case.advocate_mail_sent = False
+			case.advocate_mail_sent_at = None
 			if not case.legal_reference_number:
 				case.generate_legal_reference_number()
 			case.save()
@@ -1505,12 +1528,14 @@ def admin_change_case_status(request, case_id):
 		case.status = new_status
 		
 		# Handle completed_at for final statuses
-		if new_status in ['positive', 'positive_subject_tosearch', 'negative']:
+		if new_status in ['positive', 'positive_subject_tosearch', 'draft_positive_subject_tosearch', 'negative', 'done']:
 			if not case.completed_at:
 				case.completed_at = timezone.now()
 			# Generate LRN if missing
 			if not case.legal_reference_number:
 				case.generate_legal_reference_number()
+			case.advocate_mail_sent = False
+			case.advocate_mail_sent_at = None
 		else:
 			# Clear completed_at for non-final statuses
 			case.completed_at = None
@@ -1702,6 +1727,8 @@ def add_child_case(request, case_id):
 						pass
 				elif sel_status in ['positive','negative','positive_subject_tosearch']:
 					new_case.completed_at = timezone.now()
+					new_case.advocate_mail_sent = False
+					new_case.advocate_mail_sent_at = None
 					if not new_case.legal_reference_number:
 						new_case.generate_legal_reference_number()
 					new_case.save()
@@ -2087,6 +2114,8 @@ def sro_update_case(request, case_id):
 			# Special handling for BT/Transaction cases
 			if case.case_type and ('BT' in case.case_type.name or 'Transaction' in case.case_type.name):
 				# Just upload receipt, don't generate LRN or assign advocate yet
+				case.sro_mail_sent = False
+				case.sro_mail_sent_at = None
 				case.save()
 				CaseUpdate.objects.create(case=case, action='sro_update', remark=f"SRO uploaded receipt for BT/Transaction case. Amount={case.receipt_amount} | ReceiptNo={case.receipt_number or '-'}. Awaiting advocate assignment.")
 				messages.success(request, 'Receipt uploaded successfully. You can now assign an advocate to this case.')
@@ -2095,6 +2124,8 @@ def sro_update_case(request, case_id):
 				case.status = 'sro_document_pending'
 				case.forwarded_to_sro = False
 				case.completed_at = None
+				case.sro_mail_sent = False
+				case.sro_mail_sent_at = None
 				case.save()
 				CaseUpdate.objects.create(case=case, action='sro_update', remark=f"SRO uploaded receipt; sent back to advocate. Amount={case.receipt_amount} | ReceiptNo={case.receipt_number or '-'}")
 				messages.success(request, 'Receipt uploaded. Case returned to Advocate for document upload.')
@@ -2238,6 +2269,8 @@ def sro_update_group(request, case_id):
 			c.status = 'sro_document_pending'
 			c.forwarded_to_sro = False
 			c.completed_at = None
+			c.sro_mail_sent = False
+			c.sro_mail_sent_at = None
 			c.save()
 			try:
 				CaseUpdate.objects.create(case=c, action='sro_update', remark='SRO uploaded receipt (group). Returned to advocate for document upload.')

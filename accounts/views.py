@@ -1,8 +1,9 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpResponse
-from cases.models import Employee, Case
+from cases.models import Employee, Case, CaseDocument, CaseUpdate
+from cases.decorators import admin_required
 from django.utils import timezone
 from django.db.models import Q, Count
 import csv
@@ -461,6 +462,61 @@ def admin_statistics(request):
     return render(request, 'accounts/admin_statistics.html', context)
 
 
+@admin_required
+def mail_pending_dashboard(request):
+    """Admin-only view for cases awaiting mail confirmation."""
+    if request.method == 'POST':
+        case_id = request.POST.get('case_id')
+        mail_type = (request.POST.get('mail_type') or '').strip().lower()
+        if not case_id or mail_type not in ['advocate', 'sro']:
+            messages.error(request, 'Invalid mail update request.')
+            return redirect('mail_pending_dashboard')
+
+        case = get_object_or_404(Case, id=case_id)
+        now = timezone.now()
+        if mail_type == 'advocate':
+            case.advocate_mail_sent = True
+            case.advocate_mail_sent_at = now
+            case.save(update_fields=['advocate_mail_sent', 'advocate_mail_sent_at', 'updated_at'])
+            try:
+                CaseUpdate.objects.create(case=case, action='mail_sent', remark='Admin marked advocate mail sent')
+            except Exception:
+                pass
+            messages.success(request, f'Advocate mail marked sent for case {case.case_number}.')
+        else:
+            case.sro_mail_sent = True
+            case.sro_mail_sent_at = now
+            case.save(update_fields=['sro_mail_sent', 'sro_mail_sent_at', 'updated_at'])
+            try:
+                CaseUpdate.objects.create(case=case, action='mail_sent', remark='Admin marked SRO mail sent')
+            except Exception:
+                pass
+            messages.success(request, f'SRO mail marked sent for case {case.case_number}.')
+
+        return redirect('mail_pending_dashboard')
+
+    final_statuses = ['positive', 'negative', 'positive_subject_tosearch', 'draft_positive_subject_tosearch', 'done']
+    advocate_pending = Case.objects.filter(
+        status__in=final_statuses,
+        advocate_mail_sent=False
+    ).select_related('bank', 'case_type', 'assigned_advocate', 'assigned_sro').order_by('-completed_at', '-updated_at')
+
+    receipt_case_ids = CaseDocument.objects.filter(is_receipt=True).values_list('case_id', flat=True).distinct()
+    sro_pending = Case.objects.filter(
+        id__in=receipt_case_ids,
+        sro_mail_sent=False
+    ).select_related('bank', 'case_type', 'assigned_advocate', 'assigned_sro').order_by('-updated_at')
+
+    context = {
+        'is_admin': True,
+        'advocate_pending': advocate_pending,
+        'sro_pending': sro_pending,
+        'advocate_pending_count': advocate_pending.count(),
+        'sro_pending_count': sro_pending.count(),
+    }
+    return render(request, 'accounts/mail_pending.html', context)
+
+
 @login_required
 def cases_by_status(request, status):
     """View to show all cases for a specific status"""
@@ -573,10 +629,10 @@ def generate_mis(request):
         messages.error(request, "You don't have permission to generate MIS reports.")
         return redirect('dashboard')
     
-    # Get all parent cases only
-    cases = Case.objects.filter(parent_case__isnull=True).select_related(
-        'bank', 'branch', 'case_type', 'assigned_advocate', 'district', 'tehsil'
-    ).order_by('-created_at')
+    # Get all completed cases (parents and children) ordered by completion date
+    cases = Case.objects.filter(completed_at__isnull=False).select_related(
+        'bank', 'branch', 'case_type', 'assigned_advocate'
+    ).order_by('-completed_at', '-updated_at')
     
     # Create CSV response
     response = HttpResponse(content_type='text/csv')
@@ -599,7 +655,7 @@ def generate_mis(request):
         'Created Date',
         'Updated Date',
         'Completed Date',
-        'Child Cases Count'
+        'Is Child Case'
     ])
     
     # Write data rows
@@ -618,7 +674,7 @@ def generate_mis(request):
             case.created_at.strftime('%Y-%m-%d %H:%M') if case.created_at else '',
             case.updated_at.strftime('%Y-%m-%d %H:%M') if case.updated_at else '',
             case.completed_at.strftime('%Y-%m-%d %H:%M') if case.completed_at else '',
-            case.child_cases.count()
+            'Yes' if case.parent_case_id else 'No'
         ])
     
     return response

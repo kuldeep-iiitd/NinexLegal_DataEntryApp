@@ -63,8 +63,8 @@ def billing_view(request):
         year = form.cleaned_data.get('year')
         selected_cases = form.cleaned_data.get('cases')
 
-        # Include both parent and child cases per new requirement
-        qs = Case.objects.select_related('bank', 'case_type', 'branch')
+        # Include both parent and child cases; only completed cases
+        qs = Case.objects.select_related('bank', 'case_type', 'branch').filter(completed_at__isnull=False)
 
         # Helper to build tz-aware UTC boundaries for a local (Asia/Kolkata) date span
         def local_span_to_utc_range(start_local_date: date, end_local_date: date):
@@ -83,7 +83,7 @@ def billing_view(request):
             qs = qs.filter(branch=branch)
         elif scope == 'date' and date_from and date_to:
             start_utc, end_utc = local_span_to_utc_range(date_from, date_to)
-            qs = qs.filter(updated_at__range=(start_utc, end_utc))
+            qs = qs.filter(completed_at__range=(start_utc, end_utc))
         elif scope == 'month' and month and year:
             # First and last day of month
             first = date(year, month, 1)
@@ -93,17 +93,17 @@ def billing_view(request):
             else:
                 last = date(year, month + 1, 1) - timedelta(days=1)
             start_utc, end_utc = local_span_to_utc_range(first, last)
-            qs = qs.filter(updated_at__range=(start_utc, end_utc))
+            qs = qs.filter(completed_at__range=(start_utc, end_utc))
         elif scope == 'day' and date_from:
             start_utc, end_utc = local_span_to_utc_range(date_from, date_from)
-            qs = qs.filter(updated_at__range=(start_utc, end_utc))
+            qs = qs.filter(completed_at__range=(start_utc, end_utc))
         elif scope == 'financial_year' and year:
             start, end = _fy_range(year)
             start_utc, end_utc = local_span_to_utc_range(start, end)
-            qs = qs.filter(updated_at__range=(start_utc, end_utc))
+            qs = qs.filter(completed_at__range=(start_utc, end_utc))
         elif scope == 'custom' and selected_cases is not None:
             ids = list(selected_cases.values_list('id', flat=True))
-            qs = Case.objects.select_related('bank', 'case_type', 'branch').filter(id__in=ids)
+            qs = Case.objects.select_related('bank', 'case_type', 'branch').filter(id__in=ids, completed_at__isnull=False)
 
         # Restrict case types to those configured for the selected bank (or branch's bank) when not custom
         allowed_case_types = None
@@ -121,13 +121,13 @@ def billing_view(request):
         opt_to = form.cleaned_data.get('optional_date_to')
         if opt_from and opt_to:
             start_utc, end_utc = local_span_to_utc_range(opt_from, opt_to)
-            qs = qs.filter(updated_at__range=(start_utc, end_utc))
+            qs = qs.filter(completed_at__range=(start_utc, end_utc))
         elif opt_from and not opt_to:
             start_utc, end_dummy = local_span_to_utc_range(opt_from, opt_from)
-            qs = qs.filter(updated_at__gte=start_utc)
+            qs = qs.filter(completed_at__gte=start_utc)
         elif opt_to and not opt_from:
             dummy, end_utc = local_span_to_utc_range(opt_to, opt_to)
-            qs = qs.filter(updated_at__lte=end_utc)
+            qs = qs.filter(completed_at__lte=end_utc)
 
         # Helper to resolve a State object for a case, preferring branch.state when available,
         # else matching by name from Case.state (string field)
@@ -144,7 +144,7 @@ def billing_view(request):
                 return None
             return None
 
-        for c in qs.order_by('-updated_at'):
+        for c in qs.order_by('-completed_at', '-updated_at'):
             # Build flat list of (case type name, fee) including original and all extra works
             pairs = []
             work_items = []
@@ -313,7 +313,7 @@ def mis_view(request):
     search = request.GET.get('q')
     output_format = request.GET.get('format')  # 'csv' for export
 
-    # Parse dates (filter by created_at to answer "when case came")
+    # Parse dates (filter by completed_at to answer "when case completed")
     start_date = None
     end_date = None
     if start_date_str:
@@ -345,16 +345,17 @@ def mis_view(request):
             'case_type_selected': '', 'state_selected': '', 'status_selected': '', 'q': ''
         })
 
-    # Base queryset (include both root and child cases)
+    # Base queryset (include both root and child cases, only completed)
     qs = (
         Case.objects.select_related('bank', 'branch', 'employee', 'assigned_advocate', 'case_type')
-        .order_by('created_at')  # Ascending order: oldest cases first
+        .filter(completed_at__isnull=False)
+        .order_by('completed_at')  # Ascending order: oldest completions first
     )
 
     if start_date:
-        qs = qs.filter(created_at__date__gte=start_date)
+        qs = qs.filter(completed_at__date__gte=start_date)
     if end_date:
-        qs = qs.filter(created_at__date__lte=end_date)
+        qs = qs.filter(completed_at__date__lte=end_date)
     # Apply selection semantics:
     # - If by=bank: require bank; optionally narrow to a branch of that bank.
     # - If by=branch: filter by branch (and implicitly the branch's bank).
@@ -432,7 +433,7 @@ def mis_view(request):
             
             writer.writerow([
                 i,
-                (c.created_at.date() if c.created_at else ''),
+                (c.completed_at.date() if c.completed_at else ''),
                 (c.bank.name if c.bank_id else ''),
                 (c.branch.name if c.branch_id else ''),
                 branch_code,
@@ -465,7 +466,7 @@ def mis_view(request):
         
         rows.append({
             'obj': c,
-            'date': c.created_at.date() if c.created_at else None,
+            'date': c.completed_at.date() if c.completed_at else None,
             'bank': c.bank.name if c.bank_id else '',
             'branch': c.branch.name if c.branch_id else '',
             'branch_code': branch_code,

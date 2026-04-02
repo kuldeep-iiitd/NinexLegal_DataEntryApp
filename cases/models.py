@@ -162,6 +162,11 @@ class Case(models.Model):
 	# Workflow tracking
 	forwarded_to_sro = models.BooleanField(default=False)
 	completed_at = models.DateTimeField(blank=True, null=True)
+	# Mail tracking (admin confirmation)
+	advocate_mail_sent = models.BooleanField(default=False)
+	advocate_mail_sent_at = models.DateTimeField(blank=True, null=True)
+	sro_mail_sent = models.BooleanField(default=False)
+	sro_mail_sent_at = models.DateTimeField(blank=True, null=True)
 	# Track when a case was reassigned to surface in advocate tray
 	reassigned_at = models.DateTimeField(blank=True, null=True)
 	# Relationship to original (parent) case when created as an additional property case
