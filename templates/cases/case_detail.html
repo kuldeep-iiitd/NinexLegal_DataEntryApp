@@ -88,7 +88,7 @@
                                         <p class="font-bold text-white text-lg">{{ case.case_number }}</p>
                                     </div>
                                 </div>
-                                {% if is_admin and (is_active_quotation or case.status == 'quotation') %}
+                                {% if is_admin and is_active_quotation or case.status == 'quotation' and is_admin %}
                                 <div class="flex items-center p-4 bg-gray-800/60 backdrop-blur-sm rounded-lg border border-white/20">
                                     <div class="bg-teal-500 rounded-lg p-2.5 mr-3">
                                         <i class="fas fa-dollar-sign text-white"></i>
