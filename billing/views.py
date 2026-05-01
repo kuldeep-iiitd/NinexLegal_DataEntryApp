@@ -313,7 +313,7 @@ def mis_view(request):
     search = request.GET.get('q')
     output_format = request.GET.get('format')  # 'csv' for export
 
-    # Parse dates (filter by completed_at to answer "when case completed")
+    # Parse dates (filter by created_at to answer "when case created")
     start_date = None
     end_date = None
     if start_date_str:
@@ -345,17 +345,16 @@ def mis_view(request):
             'case_type_selected': '', 'state_selected': '', 'status_selected': '', 'q': ''
         })
 
-    # Base queryset (include both root and child cases, only completed)
+    # Base queryset (include both root and child cases, all statuses)
     qs = (
         Case.objects.select_related('bank', 'branch', 'employee', 'assigned_advocate', 'case_type')
-        .filter(completed_at__isnull=False)
-        .order_by('completed_at')  # Ascending order: oldest completions first
+        .order_by('created_at')  # Ascending order: oldest created first
     )
 
     if start_date:
-        qs = qs.filter(completed_at__date__gte=start_date)
+        qs = qs.filter(created_at__date__gte=start_date)
     if end_date:
-        qs = qs.filter(completed_at__date__lte=end_date)
+        qs = qs.filter(created_at__date__lte=end_date)
     # Apply selection semantics:
     # - If by=bank: require bank; optionally narrow to a branch of that bank.
     # - If by=branch: filter by branch (and implicitly the branch's bank).
@@ -433,7 +432,7 @@ def mis_view(request):
             
             writer.writerow([
                 i,
-                (c.completed_at.date() if c.completed_at else ''),
+                (c.created_at.date() if c.created_at else ''),
                 (c.bank.name if c.bank_id else ''),
                 (c.branch.name if c.branch_id else ''),
                 branch_code,
@@ -466,7 +465,7 @@ def mis_view(request):
         
         rows.append({
             'obj': c,
-            'date': c.completed_at.date() if c.completed_at else None,
+            'date': c.created_at.date() if c.created_at else None,
             'bank': c.bank.name if c.bank_id else '',
             'branch': c.branch.name if c.branch_id else '',
             'branch_code': branch_code,
