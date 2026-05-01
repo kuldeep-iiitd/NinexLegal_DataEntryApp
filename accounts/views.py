@@ -629,10 +629,10 @@ def generate_mis(request):
         messages.error(request, "You don't have permission to generate MIS reports.")
         return redirect('dashboard')
     
-    # Get all completed cases (parents and children) ordered by completion date
-    cases = Case.objects.filter(completed_at__isnull=False).select_related(
+    # Get all cases (parents and children) regardless of status
+    cases = Case.objects.select_related(
         'bank', 'branch', 'case_type', 'assigned_advocate'
-    ).order_by('-completed_at', '-updated_at')
+    ).order_by('-completed_at', '-created_at', '-updated_at')
     
     # Create CSV response
     response = HttpResponse(content_type='text/csv')
