@@ -196,6 +196,22 @@ class Case(models.Model):
 		if self.pk:
 			self.child_cases.update(status=self.status)
 
+	@classmethod
+	def generate_unique_child_case_number(cls, parent_case):
+		"""Generate a child case number that is unique for the parent case's case type."""
+		base = (getattr(parent_case, 'case_number', '') or '').strip() or f"CASE-{parent_case.id}"
+		case_type = getattr(parent_case, 'case_type', None)
+		candidate = f"{base}-2"
+		suffix = 2
+		while True:
+			query = cls.objects.filter(case_type=case_type, case_number=candidate)
+			if parent_case and getattr(parent_case, 'pk', None):
+				query = query.exclude(pk=parent_case.pk)
+			if not query.exists():
+				return candidate
+			suffix += 1
+			candidate = f"{base}-{suffix}"
+
 	def generate_legal_reference_number(self):
 		"""Generate and assign LRN if not set.
 		Format: NX-<STATE>-<EMP>-<SERIAL>-<FY>

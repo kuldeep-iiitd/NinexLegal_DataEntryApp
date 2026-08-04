@@ -1678,7 +1678,7 @@ def add_child_case(request, case_id):
 			branch = form.cleaned_data.get('branch') or parent.branch
 			new_case = Case(
 				applicant_name=parent.applicant_name,
-				case_number=f"{parent.case_number}-{parent.child_cases.count()+2}",
+				case_number=Case.generate_unique_child_case_number(parent),
 				bank=parent.bank,
 				case_type=parent.case_type,
 				documents_present=parent.documents_present,
